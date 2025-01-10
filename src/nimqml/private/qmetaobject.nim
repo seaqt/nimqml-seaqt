@@ -11,18 +11,19 @@ proc setup(superClass: QMetaObject,
            signals: seq[SignalDefinition],
            slots: seq[SlotDefinition],
            properties: seq[PropertyDefinition]): DosQMetaObject =
-  var dosParameters: seq[seq[DosParameterDefinition]] = @[]
-  for i in 0..<signals.len:
-    var parameters: seq[DosParameterDefinition] = @[]
-    for p in signals[i].parameters:
-      parameters.add(DosParameterDefinition(name: p.name.cstring, metaType: p.metaType.cint))
-    dosParameters.add(parameters)
+  var dosParameters = newSeq[seq[DosParameterDefinition]](signals.len + slots.len)
+  # prevent garbage collector from reclaiming parameter defs in case `dosParameters`
+  # goes out of scope in the C code and thus gets reused for another stack var
+  when compiles(GC_ref(dosParameters)):
+    GC_ref(dosParameters)
 
   var dosSignals: seq[DosSignalDefinition] = @[]
   for i in 0..<signals.len:
-    let parametersCount = dosParameters[i].len.cint
     let name = signals[i].name.cstring
-    let dosSignal = DosSignalDefinition(name: name, parametersCount: parametersCount, parameters: if parametersCount > 0: dosParameters[i][0].unsafeAddr else: nil)
+    let parametersCount = signals[i].parameters.len.cint
+    for p in signals[i].parameters:
+      dosParameters[i].add(DosParameterDefinition(name: p.name.cstring, metaType: p.metaType.cint))
+    let dosSignal = DosSignalDefinition(name: name, parametersCount: parametersCount, parameters: if dosParameters[i].len > 0: dosParameters[i][0].unsafeAddr else: nil)
     dosSignals.add(dosSignal)
 
   var dosSlots: seq[DosSlotDefinition] = @[]
@@ -30,12 +31,10 @@ proc setup(superClass: QMetaObject,
     let name = slots[i].name.cstring
     let returnMetaType = slots[i].returnMetaType.cint
     let parametersCount = slots[i].parameters.len.cint
-    var parameters: seq[DosParameterDefinition] = @[]
     for p in slots[i].parameters:
-      parameters.add(DosParameterDefinition(name: p.name.cstring, metaType: p.metaType.cint))
+      dosParameters[i + signals.len].add(DosParameterDefinition(name: p.name.cstring, metaType: p.metaType.cint))
     let dosSlot = DosSlotDefinition(name: name, returnMetaType: returnMetaType,
-                                    parametersCount: parametersCount, parameters: if parameters.len > 0: parameters[0].unsafeAddr else: nil)
-    dosParameters.add(parameters)
+                                    parametersCount: parametersCount, parameters: if dosParameters[i + signals.len].len > 0: dosParameters[i + signals.len][0].unsafeAddr else: nil)
     dosSlots.add(dosSlot)
 
   var dosProperties: seq[DosPropertyDefinition] = @[]
@@ -54,7 +53,9 @@ proc setup(superClass: QMetaObject,
   let slots = DosSlotDefinitions(count: dosSlots.len.cint, definitions: if dosSlots.len > 0: dosSlots[0].unsafeAddr else: nil)
   let properties = DosPropertyDefinitions(count: dosProperties.len.cint, definitions: if dosProperties.len > 0: dosProperties[0].unsafeAddr else: nil)
 
-  return dos_qmetaobject_create(superClass.vptr, className.cstring, signals.unsafeAddr, slots.unsafeAddr, properties.unsafeAddr)
+  result = dos_qmetaobject_create(superClass.vptr, className.cstring, signals.unsafeAddr, slots.unsafeAddr, properties.unsafeAddr)
+  when compiles(GC_unref(dosParameters)):
+    GC_unref(dosParameters)
 
 proc invokeMethod*(typ: type QMetaObject, context: QObject, l: LambdaInvokerProc, connectionType: ConnectionType = ConnectionType.AutoConnection): bool =
   let id = LambdaInvoker.instance.add(l)

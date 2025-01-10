@@ -4,7 +4,11 @@ proc setup*(variant: QVariant) =
 
 proc setup*(variant: QVariant, value: int) =
   ## Setup a new QVariant given a cint value
-  variant.vptr = dos_qvariant_create_int(value.cint)
+  when sizeof(int) == sizeof(cint):
+    variant.vptr = dos_qvariant_create_int(value.cint)
+  else:
+    variant.vptr = dos_qvariant_create_int(value.clonglong)
+
 
 proc setup*(variant: QVariant, value: bool) =
   ## Setup a new QVariant given a bool value
@@ -83,9 +87,7 @@ proc `doubleVal=`*(variant: QVariant, value: cdouble) =
 
 proc stringVal*(variant: QVariant): string =
   ## Return the QVariant value as string
-  var rawCString = dos_qvariant_toString(variant.vptr)
-  result = $rawCString
-  dos_chararray_delete(rawCString)
+  variant.vPtr.toString()
 
 proc `stringVal=`*(variant: QVariant, value: string) =
   ## Sets the QVariant string value
