@@ -18,14 +18,14 @@ jobs:
     strategy:
       matrix:
         os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
-        nim: ['devel', 'version-1-6', 'version-1-4', 'version-1-2']
+        nim: ['~= 2.0.0', '~= 2.2.0']
 
     name: Nim ${{ matrix.nim }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: alaviss/setup-nim@0.1.1
+      - uses: actions/checkout@v4
+      - uses: nim-lang/setup-nimble-action@v1
         with:
-          path: 'nim'
-          version: ${{ matrix.nim }}
-      - run: nimble buildExamples
+          nimble-version: '0.16.4'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nimble --requires="nim ${{matrix.nim}}" buildExamples
