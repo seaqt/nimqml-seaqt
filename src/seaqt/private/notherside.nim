@@ -5,8 +5,8 @@
 import
   seaqt/[
     qabstractitemdelegate, qabstractitemmodel, qapplication, qcoreapplication,
-    qmetatype, qmetaobject, qobject, qmetamethod, qresource, qurl, qvariant,
-    qqmlapplicationengine, qqmlcomponent, qqmlcontext, qquickview,
+    qguiapplication, qmetatype, qmetaobject, qobject, qmetamethod, qresource, qurl,
+    qvariant, qqmlapplicationengine, qqmlcomponent, qqmlcontext, qquickview,
   ],
   ./metaobjectgen
 

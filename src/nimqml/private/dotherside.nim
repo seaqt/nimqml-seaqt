@@ -121,8 +121,8 @@ proc dos_chararray_delete(str: cstring) =
   nos_chararray_delete(str)
 
 # # QCoreApplication
-proc dos_qcoreapplication_application_dir_path(): cstring =
-  debugEcho "dos_qcoreapplication_application_dir_path(): cstring "
+proc dos_qcoreapplication_application_dir_path(): string =
+  gen_qcoreapplication.QCoreApplication.applicationDirPath()
 
 # # QApplication
 var qapp: gen_qapplication.Qapplication
@@ -147,7 +147,7 @@ proc dos_qguiapplication_exec() =
   discard gen_qguiapplication.QGuiApplication.exec()
 
 proc dos_qguiapplication_quit() =
-  debugEcho "dos_qguiapplication_quit() "
+  gen_qcoreapplication.QCoreApplication.quit()
 
 proc dos_qguiapplication_delete() =
   debugEcho "dos_qguiapplication_delete() "
