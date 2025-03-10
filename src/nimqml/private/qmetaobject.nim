@@ -57,7 +57,22 @@ proc setup(superClass: QMetaObject,
   let slots = DosSlotDefinitions(count: dosSlots.len.cint, definitions: if dosSlots.len > 0: dosSlots[0].unsafeAddr else: nil)
   let properties = DosPropertyDefinitions(count: dosProperties.len.cint, definitions: if dosProperties.len > 0: dosProperties[0].unsafeAddr else: nil)
 
-  return dos_qmetaobject_create(superClass.vptr, className.cstring, signals.unsafeAddr, slots.unsafeAddr, properties.unsafeAddr)
+  when compiles(GC_ref(dosSignalParameters)):
+    # prevent garbage collector from reclaiming parameter defs in case these
+    # variables go out of scope in the optimized C code and thus gets reused for
+    # another stack var - this seems to be an issue in refc code where the
+    # internal pointers are not accounted for / dropped by the C compiler
+    GC_ref(dosSignalParameters)
+    GC_ref(dosSlotParameters)
+    GC_ref(dosSlots)
+    GC_ref(dosProperties)
+
+  result = dos_qmetaobject_create(superClass.vptr, className.cstring, signals.unsafeAddr, slots.unsafeAddr, properties.unsafeAddr)
+  when compiles(GC_unref(dosSignalParameters)):
+    GC_unref(dosSignalParameters)
+    GC_unref(dosSlotParameters)
+    GC_unref(dosSlots)
+    GC_unref(dosProperties)
 
 proc invokeMethod*(typ: type QMetaObject, context: QObject, l: LambdaInvokerProc, connectionType: ConnectionType = ConnectionType.AutoConnection): bool =
   let id = LambdaInvoker.instance.add(l)

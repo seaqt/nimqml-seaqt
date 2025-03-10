@@ -62,12 +62,12 @@ method roleNames*(self: QAbstractItemModel): Table[int, string] {.base.} =
   ## Return the model role names
   nil
 
-proc roleNamesCallback(modelPtr: pointer, hash: DosQHashIntByteArray) {.cdecl, exportc.} =
+proc roleNamesCallback(modelPtr: pointer): Table[cint, seq[byte]] {.cdecl, exportc.} =
   debugMsg("QAbstractItemModel", "roleNamesCallback")
   let model = cast[QAbstractItemModel](modelPtr)
   let table = model.roleNames()
   for key, val in table.pairs:
-    dos_qhash_int_qbytearray_insert(hash, key.cint, val.cstring)
+    result.add(key.cint, @(val.toOpenArrayByte(0, val.high())))
 
 method flags*(self: QAbstractItemModel, index: QModelIndex): QtItemFlag {.base.} =
   ## Return the item flags and the given index
@@ -100,7 +100,7 @@ proc createIndex*(self: QAbstractItemModel, row: int, column: int, data: pointer
 method index*(self: QAbstractItemModel, row: int, column: int, parent: QModelIndex): QModelIndex {.base.} =
   doAssert(false, "QAbstractItemModel::index is pure virtual")
 
-proc indexCallback(modelPtr: pointer, row: cint, column: cint, parent: DosQModelIndex, result: DosQModelIndex) {.cdecl, exportc.} =
+proc indexCallback(modelPtr: pointer, row: cint, column: cint, parent: DosQModelIndex, result: var DosQModelIndex) {.cdecl, exportc.} =
   debugMsg("QAbstractItemModel", "indexCallback")
   let model = cast[QAbstractItemModel](modelPtr)
   let index = model.index(row.int, column.int, newQModelIndex(parent, Ownership.Clone))
@@ -109,7 +109,7 @@ proc indexCallback(modelPtr: pointer, row: cint, column: cint, parent: DosQModel
 method parent*(self: QAbstractItemModel, child: QModelIndex): QModelIndex {.base.} =
   doAssert(false, "QAbstractItemModel::parent is pure virtual")
 
-proc parentCallback(modelPtr: pointer, child: DosQModelIndex, result: DosQModelIndex) {.cdecl, exportc.} =
+proc parentCallback(modelPtr: pointer, child: DosQModelIndex, result: var DosQModelIndex) {.cdecl, exportc.} =
   debugMsg("QAbstractItemModel", "parentCallback")
   let model = cast[QAbstractItemModel](modelPtr)
   let index = model.parent(newQModelIndex(child, Ownership.Clone))

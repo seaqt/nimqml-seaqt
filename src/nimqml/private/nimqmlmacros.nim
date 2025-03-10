@@ -123,8 +123,8 @@ proc getPragmas(n: NimNode): seq[string] {.compiletime.} =
     return
   let pragma = pragmas[0]
   for c in pragma:
-    doAssert(c.kind in {nnkSym, nnkIdent})
-    result.add($c)
+    if c.kind in {nnkSym, nnkIdent}:
+      result.add($c)
 
 proc extractQObjectTypeDef(head: NimNode): FindQObjectTypeResult {.compiletime.} =
   ## Extract the first type section and extract the first type Name and SuperType
@@ -517,7 +517,7 @@ proc isQObject(impl: NimNode): bool {.compileTime.} =
   ## Return true if the type is a QObject
   var typ = impl
   while typ.kind == nnkTypeDef:
-    let name = typ[0]
+    let name = typ[0].basename()
     if $name == "QObject":
       return true
     typ = superClass(typ)
