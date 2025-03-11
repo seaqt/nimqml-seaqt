@@ -367,7 +367,7 @@ proc dos_qabstractitemmodel_qmetaobject(): DosQMetaObject =
 
 # QUrl
 proc dos_qurl_create(url: cstring, parsingMode: cint): DosQUrl =
-  QUrl.create($url, parsingMode)
+  QUrl.create($url, parsingMode).take()
 
 proc dos_qurl_delete(vptr: DosQUrl) =
   vptr.delete()
@@ -567,13 +567,13 @@ proc dos_qabstractlistmodel_create(modelPtr: NimQAbstractListModel,
   gen_qabstractitemmodel.QAbstractListModel.create(vtbl = vtbl).take()
 
 proc dos_qabstractlistmodel_columnCount(modelPtr: DosQAbstractListModel, index: DosQModelIndex): cint =
-  QAbstractListModel(modelPtr).columnCount(index)
+  if index.isValid(): 1 else: 0
 
 proc dos_qabstractlistmodel_parent(modelPtr: DosQAbstractListModel, index: DosQModelIndex): DosQModelIndex =
-  QAbstractListModel(modelPtr).parent(index).take()
+  QModelIndex.create().take()
 
 proc dos_qabstractlistmodel_index(modelPtr: DosQAbstractListModel, row: cint, column: cint, parent: DosQModelIndex): DosQModelIndex =
-  modelPtr.QAbstractListModelindex(row, column, parent).take()
+  QAbstractListModel(modelPtr).QAbstractListModelindex(row, column, parent).take()
 
 # QAbstractTableModel
 proc dos_qabstracttablemodel_qmetaobject(): DosQMetaObject =
@@ -604,9 +604,9 @@ proc dos_qabstracttablemodel_create(modelPtr: NimQAbstractTableModel,
   gen_qabstractitemmodel.QAbstractTableModel.create(vtbl = vtbl).take()
 
 proc dos_qabstracttablemodel_parent(modelPtr: DosQAbstractTableModel, index: DosQModelIndex): DosQModelIndex =
-  QAbstractTableModel(modelPtr).parent(index).take()
+  QModelIndex.create().take()
 
 proc dos_qabstracttablemodel_index(modelPtr: DosQAbstractTableModel, row: cint, column: cint, parent: DosQModelIndex): DosQModelIndex =
-  QAbstractTableModel(modelPtr).index(row, column, parent).take()
+  QAbstractTableModel(modelPtr).QAbstractTableModelindex(row, column, parent).take()
 
 {.pop.}

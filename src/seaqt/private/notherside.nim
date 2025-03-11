@@ -142,14 +142,16 @@ proc borrow*(v: gen_qobject_types.QObject): DosQObject =
 converter toQObject*(v: DosQObject): gen_qobject_types.QObject =
   gen_qobject_types.QObject(h: pointer(v))
 
-converter toQUrl*(v: gen_qurl_types.QUrl): DosQUrl =
+template take*(v: gen_qurl_types.QUrl): DosQUrl =
+  var vv = v
+  vv.owned = false
+  DosQUrl(vv.h)
+
+proc borrow*(v: gen_qurl_types.QUrl): DosQUrl =
   DosQUrl(v.h)
 
 converter toQQrl*(v: DosQUrl): gen_qurl_types.QUrl =
   gen_qurl_types.QUrl(h: pointer(v))
-
-converter toQVariant*(v: gen_qvariant_types.QVariant): DosQVariant =
-  DosQVariant(v.h)
 
 template take*(v: gen_qvariant_types.QVariant): DosQVariant =
   var vv = v
@@ -166,7 +168,8 @@ from system/ansi_c import c_calloc, c_free
 
 # TODO Get rid of this - but it requires changing the dos_* interface significantly
 import std/tables
-var classProps {.threadvar.}: Table[string, QMetaMethod]
+# https://github.com/nim-lang/Nim/issues/24770
+var classProps {.threadvar.}: TableRef[string, QMetaMethod]
 
 proc classLookup(mo: gen_qobjectdefs_types.QMetaObject, id: cint, read: bool): string =
   repr(mo.h) & $id & $read
@@ -233,6 +236,8 @@ proc nos_qmetaobject_create(
     )
 
   var tmp = genMetaObject(superclassMetaObject, $className, signals, slots, props)
+  if classProps.isNil():
+    new(classProps)
 
   block:
     for i in 0 ..< propertyDefinitions.count:
@@ -293,7 +298,7 @@ template setupCallbacks[MC](
       {.gcsafe.}:
         dosQObjectCallbackParam(
           nimobjectParam,
-          name,
+          name.borrow(),
           cint dosArgs.len,
           cast[ptr DosQVariantArray](addr dosArgs[0]),
         )
@@ -479,7 +484,7 @@ proc nos_qobject_connect_lambda_with_context_static(
     let argv = cast[ptr UncheckedArray[pointer]](argv)
     var args = newSeq[DosQVariant](meth.parameterCount())
     for i in cint(0) ..< cint(args.len):
-      args[i] = gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i) + 1])
+      args[i] = gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i) + 1]).take()
     noExceptions:
       {.gcsafe.}:
         callback(data, cint args.len, cast[ptr DosQVariantArray](addr args[0]))
