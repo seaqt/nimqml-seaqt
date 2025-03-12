@@ -26,6 +26,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: nim-lang/setup-nimble-action@v1
         with:
-          nimble-version: '0.16.4'
+          nimble-version: 'nightly'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: nimble --requires="nim ${{matrix.nim}}" buildExamples
