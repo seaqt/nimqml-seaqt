@@ -184,7 +184,7 @@ proc dos_qvariant_create(): DosQVariant =
   gen_qvariant.QVariant.create().take()
 
 proc dos_qvariant_create_int(value: cint): DosQVariant =
-  gen_qvariant.QVariant.create(value).take()
+  gen_qvariant.QVariant.create2(value).take()
 
 proc dos_qvariant_create_int(value: clonglong): DosQVariant =
   gen_qvariant.QVariant.create(value).take()
@@ -229,7 +229,7 @@ proc dos_qvariant_toFloat(variant: DosQVariant): cfloat =
   variant.toFloat()
 
 proc dos_qvariant_setInt(variant: DosQVariant, value: cint) =
-  variant.operatorAssign(gen_qvariant.QVariant.create(value))
+  variant.operatorAssign(gen_qvariant.QVariant.create2(value))
 
 proc dos_qvariant_setBool(variant: DosQVariant, value: bool) =
   variant.operatorAssign(gen_qvariant.QVariant.create(value))
