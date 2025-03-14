@@ -37,4 +37,4 @@ jobs:
         with:
           version: '${{matrix.qt}}.*'
       - run: |
-          nimble --requires="nim ${{matrix.nim}}" --requires="https://github.com/seaqt/nim-seaqt@#qt-${{matrix.qt}}" buildExamples
+          nimble --requires="nim ${{matrix.nim}}" --requires="https://github.com/seaqt/nim-seaqt#qt-${{matrix.qt}}" buildExamples
