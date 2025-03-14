@@ -200,7 +200,7 @@ proc nos_qmetaobject_create(
   template params(
       s: DosSignalDefinition | DosSlotDefinition
   ): openArray[DosParameterDefinition] =
-    let p = cast[ptr UncheckedArray[DosParameterDefinition]](s.parameters)
+    var p = cast[ptr UncheckedArray[DosParameterDefinition]](s.parameters)
     p.toOpenArray(0, s.parametersCount.int - 1)
 
   let
@@ -287,7 +287,7 @@ template setupCallbacks[MC](
     let mo = metaObjectParam
 
     template callQObjectCallback(meth: QMetaMethod, offset: int) =
-      let name = gen_qvariant.QVariant.create(string.fromBytes(meth.name()))
+      let name = gen_qvariant.QVariant.create(cstring(string.fromBytes(meth.name())))
       var args = newSeq[gen_qvariant.QVariant](meth.parameterCount() + 1)
       args[0] = gen_qvariant.QVariant.create()
 

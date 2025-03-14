@@ -6,9 +6,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master ]
+    branches: [ "**" ]
   pull_request:
-    branches: [ master ]
+    branches: [ "**" ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -17,15 +17,20 @@ jobs:
   test:
     strategy:
       matrix:
-        os: ['windows-latest', 'macos-latest', 'ubuntu-latest']
-        nim: ['devel', 'version-1-6', 'version-1-4', 'version-1-2']
+        os: ['macos-latest', 'ubuntu-latest']
+        nim: ['~= 2.0.0', '~= 2.2.0']
 
     name: Nim ${{ matrix.nim }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: alaviss/setup-nim@0.1.1
+      - uses: actions/checkout@v4
+      - uses: nim-lang/setup-nimble-action@v1
         with:
-          path: 'nim'
-          version: ${{ matrix.nim }}
-      - run: nimble buildExamples
+          nimble-version: 'nightly'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install pkgconfig
+        if: runner.os == 'Windows'
+        run: choco install pkgconfiglite
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+      - run: nimble --requires="nim ${{matrix.nim}}" buildExamples

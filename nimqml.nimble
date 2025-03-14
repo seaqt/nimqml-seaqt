@@ -23,3 +23,8 @@ task buildExamples, "Build examples":
   exec "nim c examples/simpledata/main"
   exec "nim c examples/slotsandproperties/main"
 
+task test, "Run a few tests":
+  exec "nim c -r examples/connections/main"
+  exec "nim c --mm:refc -r examples/connections/main"
+
+  exec "nim c -r src/seaqt/private/test_metaobjectgen"
