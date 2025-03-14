@@ -285,7 +285,7 @@ proc isLambdaSymbol(n: NimNode): bool =
   return impl[2].kind == nnkLambda
 
 proc isProcOrMethod(n: NimNode): bool {.compiletime.} =
-  n.kind in {nnkProcDef, nnkMethodDef} 
+  n.kind in {nnkProcDef, nnkMethodDef}
 
 proc isSlot(n: NimNode): bool {.compiletime.} =
   isProcOrMethod(n) and "slot" in n.getPragmas
@@ -508,6 +508,8 @@ type MyProcInfo = object
 
 proc superClass(n: NimNode): NimNode {.compileTime.} =
   ## Return the superclass of an object or Empty
+  if n[2].kind == nnkEmpty or n[2][0].kind == nnkEmpty:
+    return newNimNode(nnkEmpty)
   let inherit = n[2][0][1]
   if inherit.kind == nnkOfInherit:
     return inherit[0].getImpl()
@@ -517,14 +519,13 @@ proc isQObject(impl: NimNode): bool {.compileTime.} =
   ## Return true if the type is a QObject
   var typ = impl
   while typ.kind == nnkTypeDef:
-    if typ.len > 0:
-      let name =
-        if typ[0].kind in {nnkPragmaExpr}:
-          $typ[0].basename()
-        else:
-          $typ[0]
-      if $name == "QObject":
-        return true
+    let name =
+      if typ[0].kind in {nnkPragmaExpr}:
+        $typ[0].basename()
+      else:
+        $typ[0]
+    if $name == "QObject":
+      return true
     typ = superClass(typ)
   return false
 
@@ -580,15 +581,15 @@ proc extractProcDefs(node: NimNode): seq[NimNode] {.compileTime.} =
 
 proc generateSignature(info: MyProcInfo): string {.compileTime.} =
   let mapTypes = proc(name: string): string =
-      if name == "string": 
-        "QString" 
-      else: 
+      if name == "string":
+        "QString"
+      else:
         name
   let name = info.name
   let params = info.params[1 .. ^1].map(mapTypes).join(",")
   let prefix = if info.isSlot: "1" else: "2"
   return $prefix & $info.name & "(" & $params & ")"
-  
+
 proc generateSignature(node: NimNode): string {.compileTime.} =
   let defs: seq[NimNode] = extractProcDefs(node)
   let infos: seq[MyProcInfo] = extractQObjectSignalsAndSlots(defs)
