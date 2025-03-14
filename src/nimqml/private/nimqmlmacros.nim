@@ -508,8 +508,9 @@ type MyProcInfo = object
 
 proc superClass(n: NimNode): NimNode {.compileTime.} =
   ## Return the superclass of an object or Empty
-  if n[2].kind == nnkEmpty or n[2][0].kind == nnkEmpty:
+  if n[2][0].kind == nnkEmpty:
     return newNimNode(nnkEmpty)
+
   let inherit = n[2][0][1]
   if inherit.kind == nnkOfInherit:
     return inherit[0].getImpl()
@@ -520,7 +521,7 @@ proc isQObject(impl: NimNode): bool {.compileTime.} =
   var typ = impl
   while typ.kind == nnkTypeDef:
     let name =
-      if typ[0].kind in {nnkPragmaExpr}:
+      if typ[0].kind in {nnkPragmaExpr, nnkPrefix, nnkPostfix}:
         $typ[0].basename()
       else:
         $typ[0]
