@@ -517,13 +517,14 @@ proc isQObject(impl: NimNode): bool {.compileTime.} =
   ## Return true if the type is a QObject
   var typ = impl
   while typ.kind == nnkTypeDef:
-    let name =
-      if typ[0].kind in {nnkPragmaExpr}:
-        $typ[0].basename()
-      else:
-        $typ[0]
-    if $name == "QObject":
-      return true
+    if typ.len > 0:
+      let name =
+        if typ[0].kind in {nnkPragmaExpr}:
+          $typ[0].basename()
+        else:
+          $typ[0]
+      if $name == "QObject":
+        return true
     typ = superClass(typ)
   return false
 
