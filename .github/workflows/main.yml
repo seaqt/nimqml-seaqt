@@ -19,6 +19,7 @@ jobs:
       matrix:
         os: ['macos-latest', 'ubuntu-latest']
         nim: ['~= 2.0.0', '~= 2.2.0']
+        qt: ['5.15`, '6.4']
 
     name: Nim ${{ matrix.nim }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -33,4 +34,8 @@ jobs:
         run: choco install pkgconfiglite
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
-      - run: nimble --requires="nim ${{matrix.nim}}" buildExamples
+        with:
+          version: '${{matrix.qt}}.*'
+      - run: |
+          nimble install -l https://github.com/seaqt/nimqml-seaqt#${{matrix.qt}}
+          nimble --requires="nim ${{matrix.nim}}" buildExamples
