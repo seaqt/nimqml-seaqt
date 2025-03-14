@@ -519,7 +519,7 @@ proc isQObject(impl: NimNode): bool {.compileTime.} =
   while typ.kind == nnkTypeDef:
     let name =
       if typ[0].kind in {nnkPragmaExpr}:
-        typ[0].basename()
+        $typ[0].basename()
       else:
         $typ[0]
     if $name == "QObject":
