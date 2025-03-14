@@ -37,5 +37,5 @@ jobs:
         with:
           version: '${{matrix.qt}}.*'
       - run: |
-          nimble install -l https://github.com/seaqt/nimqml-seaqt@#qt-${{matrix.qt}}
+          nimble install -l https://github.com/seaqt/nim-seaqt@#qt-${{matrix.qt}}
           nimble --requires="nim ${{matrix.nim}}" buildExamples
