@@ -28,6 +28,9 @@ jobs:
         with:
           nimble-version: 'nightly'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install pkgconfig
+        if: runner.os == 'Windows'
+        run: choco install pkgconfiglite
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
       - run: nimble --requires="nim ${{matrix.nim}}" buildExamples
