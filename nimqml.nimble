@@ -8,8 +8,8 @@ srcDir        = "src"
 
 # Deps
 
-requires "nim >= 1.2.0"
-requires "https://github.com/seaqt/nim-seaqt.git#qt-5.15"
+requires "nim >= 2.0.0"
+requires "https://github.com/seaqt/nim-seaqt.git"
 
 task buildExamples, "Build examples":
   exec "nim c examples/helloworld/main"

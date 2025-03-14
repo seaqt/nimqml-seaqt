@@ -434,7 +434,11 @@ proc dos_qmodelindex_parent(modelIndex: DosQModelIndex): DosQModelIndex =
 proc dos_qmodelindex_child(
     modelIndex: DosQModelIndex, row: cint, column: cint
 ): DosQModelIndex =
-  modelIndex.child(row, column).borrow()
+  let model = modelIndex.model()
+  (if model.h != nil:
+    QModelIndex.create(model.index(row, column, modelIndex))
+  else:
+    QModelIndex.create()).borrow()
 
 proc dos_qmodelindex_sibling(
     modelIndex: DosQModelIndex, row: cint, column: cint
