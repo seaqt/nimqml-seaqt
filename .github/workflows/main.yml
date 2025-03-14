@@ -19,9 +19,9 @@ jobs:
       matrix:
         os: ['macos-latest', 'ubuntu-latest']
         nim: ['~= 2.0.0', '~= 2.2.0']
-        qt: ['5.15`, '6.4']
+        qt: ['5.15', '6.4']
 
-    name: Nim ${{ matrix.nim }} on ${{ matrix.os }}
+    name: CI ${{ matrix.os }}, Nim ${{ matrix.nim }} , Qt ${{matrix.qt}}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
