@@ -36,6 +36,8 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '${{matrix.qt}}.*'
-      - run: |
+      - name: Tests
+        run: |
+          echo $PKG_CONFIG_PATH
           nimble install https://github.com/seaqt/nim-seaqt.git@#qt-${{matrix.qt}}
           nimble --requires="nim ${{matrix.nim}}" --requires="https://github.com/seaqt/nim-seaqt.git#qt-${{matrix.qt}}" buildExamples
