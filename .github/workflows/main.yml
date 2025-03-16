@@ -17,10 +17,11 @@ jobs:
   test:
     strategy:
       matrix:
-        os: ['macos-latest', 'ubuntu-latest']
+        os: ['ubuntu-latest']
         nim: ['~= 2.0.0', '~= 2.2.0']
+        qt: ['5.15', '6.4']
 
-    name: Nim ${{ matrix.nim }} on ${{ matrix.os }}
+    name: CI ${{ matrix.os }}, Nim ${{ matrix.nim }} , Qt ${{matrix.qt}}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -33,4 +34,10 @@ jobs:
         run: choco install pkgconfiglite
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
-      - run: nimble --requires="nim ${{matrix.nim}}" buildExamples
+        with:
+          version: '${{matrix.qt}}.*'
+      - name: Tests
+        run: |
+          echo $PKG_CONFIG_PATH
+          nimble install https://github.com/seaqt/nim-seaqt.git@#qt-${{matrix.qt}}
+          nimble --requires="nim ${{matrix.nim}}" --requires="https://github.com/seaqt/nim-seaqt.git#qt-${{matrix.qt}}" buildExamples

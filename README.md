@@ -16,11 +16,17 @@ Oof, really need a better name, it's a mess to type.
 
 ## Nimble instructions
 
-```
-requires "https://github.com/seaqt/nimqml-seaqt"
+```nim
+# Qt5
+requires "https://github.com/seaqt/nimqml-seaqt",
+  "https://github.com/seaqt/nim-seaqt#qt-5.15"
+
+# Qt6
+requires "https://github.com/seaqt/nimqml-seaqt",
+  "https://github.com/seaqt/nim-seaqt#qt-6.4"
 ```
 
-```
+```sh
 nimble install https://github.com/seaqt/nimqml-seaqt
 ```
 

@@ -293,7 +293,14 @@ template setupCallbacks[MC](
 
       for i in cint(0) ..< meth.parameterCount():
         args[i + 1] =
-          gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i + offset)])
+          when compiles(
+            gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i + offset)])
+          ):
+            gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i + offset)])
+          else:
+            gen_qvariant.QVariant.create(
+              meth.parameterMetaType(i), argv[int(i + offset)]
+            )
       var dosArgs = args.mapIt(DosQVariant(it.borrow()))
       {.gcsafe.}:
         dosQObjectCallbackParam(
@@ -306,6 +313,23 @@ template setupCallbacks[MC](
         discard QMetaType.construct(meth.returnType(), argv[0], args[0].constData())
 
     noExceptions:
+      const propEnums =
+        when declared(QueryPropertyDesignable):
+          {
+            QMetaObjectCallEnum.ResetProperty,
+            QMetaObjectCallEnum.RegisterPropertyMetaType,
+            QMetaObjectCallEnum.QueryPropertyDesignable,
+            QMetaObjectCallEnum.QueryPropertyScriptable,
+            QMetaObjectCallEnum.QueryPropertyStored,
+            QMetaObjectCallEnum.QueryPropertyEditable,
+            QMetaObjectCallEnum.QueryPropertyUser,
+          }
+        else:
+          {
+            QMetaObjectCallEnum.ResetProperty, QMetaObjectCallEnum.BindableProperty,
+            QMetaObjectCallEnum.RegisterPropertyMetaType,
+          }
+
       var argv {.inject.} = cast[ptr UncheckedArray[pointer]](param3)
       case c
       of QMetaObjectCallEnum.InvokeMetaMethod:
@@ -332,13 +356,7 @@ template setupCallbacks[MC](
             callQObjectCallback(meth, 0)
 
         id - (mo.propertyCount() - mo.propertyOffset())
-      of QMetaObjectCallEnum.ResetProperty,
-          QMetaObjectCallEnum.RegisterPropertyMetaType,
-          QMetaObjectCallEnum.QueryPropertyDesignable,
-          QMetaObjectCallEnum.QueryPropertyScriptable,
-          QMetaObjectCallEnum.QueryPropertyStored,
-          QMetaObjectCallEnum.QueryPropertyEditable,
-          QMetaObjectCallEnum.QueryPropertyUser:
+      of propEnums:
         id - (mo.propertyCount() - mo.propertyOffset())
       else:
         id
@@ -484,7 +502,14 @@ proc nos_qobject_connect_lambda_with_context_static(
     let argv = cast[ptr UncheckedArray[pointer]](argv)
     var args = newSeq[DosQVariant](meth.parameterCount())
     for i in cint(0) ..< cint(args.len):
-      args[i] = gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i) + 1]).take()
+      args[i] =
+        when compiles(
+          gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i) + 1])
+        ):
+          gen_qvariant.QVariant.create(meth.parameterType(i), argv[int(i) + 1]).take()
+        else:
+          gen_qvariant.QVariant.create(meth.parameterMetaType(i), argv[int(i) + 1]).take()
+
     noExceptions:
       {.gcsafe.}:
         callback(data, cint args.len, cast[ptr DosQVariantArray](addr args[0]))
