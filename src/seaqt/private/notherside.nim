@@ -213,22 +213,31 @@ proc nos_qmetaobject_create(
     signals = mapIt(
       signalDefs.toOpenArray(0, signalDefinitions.count.int - 1),
       MethodDef.signalDef(
-        $it.name, it.params.mapIt(ParamDef(name: $it.name, metaType: it.metaType))
+        $it.name,
+        it.params.mapIt(
+          ParamDef(
+            name: $it.name, metaType: $QBuiltinMetaType.fromMetaTypeId(it.metaType)
+          )
+        ),
       ),
     )
     slots = mapIt(
       slotDefs.toOpenArray(0, slotDefinitions.count.int - 1),
       MethodDef.slotDef(
         $it.name,
-        it.returnMetaType,
-        it.params.mapIt(ParamDef(name: $it.name, metaType: it.metaType)),
+        $QBuiltinMetaType.fromMetaTypeId(it.returnMetaType),
+        it.params.mapIt(
+          ParamDef(
+            name: $it.name, metaType: $QBuiltinMetaType.fromMetaTypeId(it.metaType)
+          )
+        ),
       ),
     )
     props = mapIt(
       propertyDefs.toOpenArray(0, propertyDefinitions.count.int - 1),
       PropertyDef(
         name: $it.name,
-        metaType: it.propertyMetaType,
+        metaType: $QBuiltinMetaType.fromMetaTypeId(it.propertyMetaType),
         readSlot: $it.readSlot,
         writeSlot: $it.writeSlot,
         notifySignal: $it.notifySignal,
@@ -513,9 +522,9 @@ proc nos_qobject_connect_lambda_with_context_static(
         callback(data, cint args.len, cast[ptr DosQVariantArray](addr args[0]))
 
   DosQMetaObjectConnection(
-    gen_qobject_types.QObject.connectRaw(
-      sender, senderFunc, context, slot, connectionType, meta
-    ).take()
+    gen_qobject_types.QObject
+    .connectRaw(sender, senderFunc, context, slot, connectionType, meta)
+    .take()
   )
 
 proc nos_chararray_delete(s: cstring) {.importc.}

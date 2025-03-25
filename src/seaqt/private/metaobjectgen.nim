@@ -106,17 +106,17 @@ type
 
   ParamDef* = object
     name*: string
-    metaType*: cint
+    metaType*: string
 
   MethodDef* = object
     name*: string
-    returnMetaType*: cint
+    returnMetaType*: string
     params*: seq[ParamDef]
     flags*: cuint
 
   PropertyDef* = object
     name*: string
-    metaType*: cint
+    metaType*: string
     readSlot*, writeSlot*, notifySignal*: string
 
   QObjectDef* = object
@@ -124,6 +124,139 @@ type
     signals*: seq[MethodDef]
     slots*: seq[MethodDef]
     properties*: seq[PropertyDef]
+
+# Different values than upstream since they change between qt5 & qt6 - doesn't
+# really matter
+type QBuiltinMetaType* {.pure.} = enum
+  UnknownType = ""
+  Bool = "bool"
+  Int = "int"
+  UInt = "uint"
+  LongLong = "qlonglong"
+  ULongLong = "qulonglong"
+  Double = "double"
+  Long = "long"
+  Short = "short"
+  Char = "char"
+  ULong = "ulong"
+  UShort = "ushort"
+  UChar = "uchar"
+  Float = "float"
+  VoidStar = "void*"
+  QString = "QString"
+  QVariant = "QVariant"
+  QObjectStar = "QObject*"
+  SChar = "signed char"
+  Void = "void"
+  QStringList = "QStringList"
+  QVariantList = "QVariantList"
+
+proc metaTypeId*(v: QBuiltinMetaType): cint =
+  case v
+  of QBuiltinMetaType.UnknownType: QMetaTypeTypeEnum.UnknownType
+  of QBuiltinMetaType.Bool: QMetaTypeTypeEnum.Bool
+  of QBuiltinMetaType.Int: QMetaTypeTypeEnum.Int
+  of QBuiltinMetaType.UInt: QMetaTypeTypeEnum.UInt
+  of QBuiltinMetaType.LongLong: QMetaTypeTypeEnum.LongLong
+  of QBuiltinMetaType.ULongLong: QMetaTypeTypeEnum.ULongLong
+  of QBuiltinMetaType.Double: QMetaTypeTypeEnum.Double
+  of QBuiltinMetaType.Long: QMetaTypeTypeEnum.Long
+  of QBuiltinMetaType.Short: QMetaTypeTypeEnum.Short
+  of QBuiltinMetaType.Char: QMetaTypeTypeEnum.Char
+  of QBuiltinMetaType.ULong: QMetaTypeTypeEnum.ULong
+  of QBuiltinMetaType.UShort: QMetaTypeTypeEnum.UShort
+  of QBuiltinMetaType.UChar: QMetaTypeTypeEnum.UChar
+  of QBuiltinMetaType.Float: QMetaTypeTypeEnum.Float
+  of QBuiltinMetaType.VoidStar: QMetaTypeTypeEnum.VoidStar
+  of QBuiltinMetaType.QString: QMetaTypeTypeEnum.QString
+  of QBuiltinMetaType.QVariant: QMetaTypeTypeEnum.QVariant2
+  of QBuiltinMetaType.QObjectStar: QMetaTypeTypeEnum.QObjectStar
+  of QBuiltinMetaType.SChar: QMetaTypeTypeEnum.SChar
+  of QBuiltinMetaType.Void: QMetaTypeTypeEnum.Void
+  of QBuiltinMetaType.QStringList: QMetaTypeTypeEnum.QStringList
+  of QBuiltinMetaType.QVariantList: QMetaTypeTypeEnum.QVariantList
+
+func resolve*(_: type QBuiltinMetaType, T: type): QBuiltinMetaType =
+  when T is void:
+    QBuiltinMetaType.Void
+  elif T is bool:
+    QBuiltinMetaType.Bool
+  elif T is string:
+    QBuiltinMetaType.QString
+  elif T is seq[string]:
+    QBuiltinMetaType.QStringList
+  elif T is QObject or T is ref QObject:
+    # TODO when qRegisterMetaType is implemented, we should return UnknownType
+    #      here and use the actual type as a string here..
+    QBuiltinMetaType.QObjectStar
+  else:
+    raiseAssert "Unsupported type: " & $T
+
+func fromQtType*(_: type QBuiltinMetaType, name: string): QBuiltinMetaType =
+  var ret = QBuiltinMetaType.UnknownType
+  for v in QBuiltinMetaType:
+    if $v == name:
+      ret = v
+      break
+  ret
+
+func fromMetaTypeId*(_: type QBuiltinMetaType, id: cint): QBuiltinMetaType =
+  var ret = QBuiltinMetaType.UnknownType
+  for v in QBuiltinMetaType:
+    if v.metaTypeId() == id:
+      ret = v
+      break
+  doAssert ret != QBuiltinMetaType.UnknownType
+  ret
+
+func fromNimType*(_: type QBuiltinMetaType, name: string): QBuiltinMetaType =
+  case name
+  of "bool":
+    QMetaTypeTypeEnum.Bool
+  of "cint", "int32":
+    QMetaTypeTypeEnum.Int
+  of "cuint", "uint32":
+    QMetaTypeTypeEnum.UInt
+  of "clonglong", "int64":
+    QMetaTypeTypeEnum.LongLong
+  of "culonglong", "uint64":
+    QMetaTypeTypeEnum.ULongLong
+  of "cfloat":
+    QMetaTypeTypeEnum.Double
+  of "clong":
+    QMetaTypeTypeEnum.Long
+  of "cshort", "int16":
+    QMetaTypeTypeEnum.Short
+  of "char":
+    QMetaTypeTypeEnum.Char
+  of "culong":
+    QMetaTypeTypeEnum.ULong
+  of "cushort", "uint16":
+    QMetaTypeTypeEnum.UShort
+  of "cfloat":
+    QMetaTypeTypeEnum.Float
+  of "pointer":
+    QMetaTypeTypeEnum.VoidStar
+  of "string":
+    QMetaTypeTypeEnum.QString
+  of "void":
+    QMetaTypeTypeEnum.Void
+  of "int":
+    when sizeof(int) == sizeof(clonglong):
+      QMetaTypeTypeEnum.LongLong
+    elif sizeof(int) == sizeof(cint):
+      QMetaType.Int
+    else:
+      raiseAssert "Unsupported integer size " & $sizeof(int)
+  of "uint":
+    when sizeof(uint) == sizeof(culonglong):
+      QMetaTypeTypeEnum.ULongLong
+    elif sizeof(uint) == sizeof(cuint):
+      QMetaType.UInt
+    else:
+      raiseAssert "Unsupported integer size " & $sizeof(int)
+  else:
+    QMetaTypeTypeEnum.UnknownType
 
 template usizeof(T): untyped =
   cuint(sizeof(T))
@@ -133,18 +266,18 @@ func isSignal*(m: MethodDef): bool =
 func isSlot*(m: MethodDef): bool =
   (m.flags and MethodSlot) > 0
 
-proc signalDef*(
+func signalDef*(
     _: type MethodDef, name: string, params: openArray[ParamDef]
 ): MethodDef =
   MethodDef(
     name: name,
     params: @params,
-    returnMetaType: QMetaTypeTypeEnum.Void,
+    returnMetaType: "void",
     flags: MethodSignal or AccessPublic,
   )
 
-proc slotDef*(
-    _: type MethodDef, name: string, returnMetaType: cint, params: openArray[ParamDef]
+func slotDef*(
+    _: type MethodDef, name: string, returnMetaType: string, params: openArray[ParamDef]
 ): MethodDef =
   MethodDef(
     name: name,
@@ -153,12 +286,17 @@ proc slotDef*(
     flags: MethodSlot or AccessPublic,
   )
 
+func signature*(v: MethodDef): string =
+  (if v.isSignal(): "1" else: "2") & v.name & "(" & v.params.mapIt(it.metaType).join(
+    ","
+  ) & ")"
+
 proc genMetaObjectData*(
     className: string,
     signals: openArray[MethodDef],
     slots: openArray[MethodDef],
     props: openArray[PropertyDef],
-): (seq[cuint], seq[byte], seq[pointer]) =
+): (seq[cuint], seq[byte], seq[string]) =
   # Class names need to be globally unique
   # TODO use something other than a thread var
   var counter {.threadvar.}: CountTable[string]
@@ -190,15 +328,9 @@ proc genMetaObjectData*(
       QMetaObjectPrivateElems + methodCount * methodSize + methodParamsSize +
       cuint(props.len) * propSize + 1
 
-  var metaTypes: seq[pointer]
-  template addMetaType(s: cint): uint32 =
-    let mt = QMetaType.create(s)
-    metaTypes.add(
-      if mt.isValid():
-        mt.iface()
-      else:
-        nil
-    )
+  var metaTypes: seq[string]
+  template addMetaType(s: string): uint32 =
+    metaTypes.add s
     uint32(metaTypes.len() - 1)
 
   var strings: OrderedTable[string, int]
@@ -218,11 +350,30 @@ proc genMetaObjectData*(
   var dataIndex = cuint QMetaObjectPrivateElems
   var paramsIndex = cuint(0)
 
-  template addType(metaType: cint): cuint =
-    if metaType == QMetaTypeTypeEnum.UnknownType:
-      raiseAssert "Unknown types not supported yet"
+  template addType(metaTypeName: string): cuint =
+    doAssert metaTypeName.len > 0
+
+    var id = QMetaTypeTypeEnum.UnknownType()
+    when nimvm:
+      id = QBuiltinMetaType.fromQtType(metaTypeName).metaTypeId()
     else:
-      cuint metaType
+      id =
+        when compiles(
+          QMetaType.fromName(metaTypeName.toOpenArrayByte(0, metaTypeName.high()))
+        ):
+          let mt =
+            QMetaType.fromName(metaTypeName.toOpenArrayByte(0, metaTypeName.high()))
+          if mt.isValid():
+            mt.id()
+          else:
+            QMetaTypeTypeEnum.UnknownType
+        else:
+          QBuiltinMetaType.fromQtType(metaTypeName).metaTypeId()
+
+    if id == QMetaTypeTypeEnum.UnknownType:
+      addString(metaTypeName) or IsUnresolvedType
+    else:
+      cuint id
 
   block: # classinfo
     discard
@@ -286,7 +437,10 @@ proc genMetaObjectData*(
         x += 1
       x
     else:
-      0
+      when QMetaObjectRevision >= 9:
+        cast[cuint](-1)
+      else:
+        cuint(0)
 
   block: # Properties
     for p in props:
@@ -303,6 +457,7 @@ proc genMetaObjectData*(
             v = v or Notify
           if p.writeSlot.len == 0 and p.notifySignal.len == 0:
             v = v or Constant
+
           v
       )
 
@@ -381,7 +536,7 @@ proc createMetaObject*(
     superclassMetaObject: gen_qobjectdefs_types.QMetaObject,
     data: openArray[cuint],
     stringdata: openArray[byte],
-    metaTypes: openArray[pointer],
+    metaTypes: openArray[string],
 ): gen_qobjectdefs.QMetaObject =
   template align(n: int): int =
     ((n + 7) div 8) * 8
@@ -405,6 +560,13 @@ proc createMetaObject*(
 
   when QMetaObjectRevision >= 9:
     if metaTypes.len > 0:
+      let metaTypes = metaTypes.mapIt:
+        let mt = QMetaType.fromName(it.toOpenArrayByte(0, it.high()))
+        if mt.isValid():
+          mt.iface()
+        else:
+          nil
+
       copyMem(
         addr blob[align(dataBytes) + align(stringdata.len)],
         addr metaTypes[0],
