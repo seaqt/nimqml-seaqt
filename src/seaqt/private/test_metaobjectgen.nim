@@ -4,23 +4,25 @@ proc test() =
   let sigs =
     @[
       MethodDef.signalDef(
-        "nameChanged", @[ParamDef(name: "firstName", metaType: QMetaTypeTypeEnum.QString)]
+        "nameChanged", @[ParamDef(name: "firstName", metaType: "QString")]
       )
     ]
 
   let slots =
     @[
-      MethodDef.slotDef("name", QMetaTypeTypeEnum.QString, @[]),
+      MethodDef.slotDef("name", "QString", @[]),
       MethodDef.slotDef(
-        "setName",
-        QMetaTypeTypeEnum.Void,
-        @[ParamDef(name: "name", metaType: QMetaTypeTypeEnum.QString)],
+        "setName", "void", @[ParamDef(name: "name", metaType: "QString")]
       ),
     ]
   let props =
     @[
       PropertyDef(
-        name: "name", metaType: QMetaTypeTypeEnum.QString, readSlot: "name", writeSlot: "setName", notifySignal: "nameChanged"
+        name: "name",
+        metaType: "QString",
+        readSlot: "name",
+        writeSlot: "setName",
+        notifySignal: "nameChanged",
       )
     ]
 
