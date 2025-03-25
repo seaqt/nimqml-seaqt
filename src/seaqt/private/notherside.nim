@@ -492,13 +492,11 @@ proc nos_qobject_connect_lambda_with_context_static(
     data: pointer,
     connectionType: cint,
 ): DosQMetaObjectConnection =
-  var meta = sender.metaObject()
-  var senderFunc = $senderFunc
-  let meth = meta.methodX(meta.indexOfSignal(cstring(senderFunc[1 ..^ 1])))
-  let numArguments = meth.parameterCount()
+  let
+    meta = sender.metaObject()
+    meth = meta.methodX(meta.indexOfSignal(cast[cstring](cast[uint](senderFunc) + 1)))
 
-  var tmp = new QObject_connectSlot
-  tmp[] = proc(argv: pointer) =
+  proc slot(argv: pointer) =
     let argv = cast[ptr UncheckedArray[pointer]](argv)
     var args = newSeq[DosQVariant](meth.parameterCount())
     for i in cint(0) ..< cint(args.len):
@@ -514,17 +512,10 @@ proc nos_qobject_connect_lambda_with_context_static(
       {.gcsafe.}:
         callback(data, cint args.len, cast[ptr DosQVariantArray](addr args[0]))
 
-  GC_ref(tmp)
   DosQMetaObjectConnection(
-    QObject_connectRawSlot(
-      sender.h,
-      cstring(senderFunc),
-      context.h,
-      cast[int](addr(tmp[])),
-      nil,
-      connectionType,
-      sender.metaObject().h,
-    )
+    gen_qobject_types.QObject.connectRaw(
+      sender, senderFunc, context, slot, connectionType, meta
+    ).take()
   )
 
 proc nos_chararray_delete(s: cstring) {.importc.}

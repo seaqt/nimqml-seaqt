@@ -339,18 +339,18 @@ proc genMetaObjectData*(
     for s in strings.keys():
       assert(sizeof(QByteArrayData) == 24)
 
-      stringdata[pos ..< pos + 3] = toBytes(cast[cuint](-1))
+      stringdata[pos .. pos + 3] = toBytes(cast[cuint](-1))
       pos += 4
 
-      stringdata[pos ..< pos + 3] = toBytes(cast[cuint](s.len()))
+      stringdata[pos .. pos + 3] = toBytes(cast[cuint](s.len()))
       pos += 4
 
-      stringdata[pos ..< pos + 3] = toBytes(cast[cuint](0))
+      stringdata[pos .. pos + 3] = toBytes(cast[cuint](0))
       pos += 4
 
       pos += 4 # Alignment
 
-      stringdata[pos ..< pos + 7] = toBytes(cast[uint64](offset))
+      stringdata[pos .. pos + 7] = toBytes(cast[uint64](offset))
       pos += 8
 
       offset -= usizeof(QByteArrayData)
@@ -364,9 +364,9 @@ proc genMetaObjectData*(
       offset = cuint(strings.len() * 2 * sizeof(cint))
     for s in strings.keys():
       let len = cuint s.len()
-      stringdata[pos ..< pos + 3] = toBytes(offset)
+      stringdata[pos .. pos + 3] = toBytes(offset)
       pos += 4
-      stringdata[pos ..< pos + 3] = toBytes(len)
+      stringdata[pos .. pos + 3] = toBytes(len)
       pos += 4
 
       offset = offset + len + 1
