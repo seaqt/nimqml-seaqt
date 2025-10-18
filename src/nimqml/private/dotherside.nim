@@ -1,6 +1,6 @@
 {.push raises: [].}
 
-import tables
+import tables, seaqt/QtCore/qtcore_pkg
 
 type
   NimQObject = pointer
