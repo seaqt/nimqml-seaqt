@@ -9,7 +9,8 @@ srcDir        = "src"
 # Deps
 
 requires "nim >= 2.0.0"
-requires "https://github.com/seaqt/nim-seaqt.git"
+# TODO 5.15 vs 6.4 vs other branches
+#requires "https://github.com/seaqt/nim-seaqt.git"
 
 task buildExamples, "Build examples":
   exec "nim c examples/helloworld/main"
