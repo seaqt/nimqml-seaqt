@@ -1,6 +1,6 @@
 {.push raises: [].}
 
-import tables
+import tables, seaqt/QtCore/qtcore_pkg
 
 type
   NimQObject = pointer
@@ -184,7 +184,10 @@ proc dos_qvariant_create(): DosQVariant =
   gen_qvariant.QVariant.create().take()
 
 proc dos_qvariant_create_int(value: cint): DosQVariant =
-  gen_qvariant.QVariant.create2(value).take()
+  when QtCoreGenVersion == "5.15.8":
+    gen_qvariant.QVariant.create2(value).take()
+  else:
+    gen_qvariant.QVariant.create(value).take()
 
 proc dos_qvariant_create_int(value: clonglong): DosQVariant =
   gen_qvariant.QVariant.create(value).take()
@@ -229,7 +232,12 @@ proc dos_qvariant_toFloat(variant: DosQVariant): cfloat =
   variant.toFloat()
 
 proc dos_qvariant_setInt(variant: DosQVariant, value: cint) =
-  variant.operatorAssign(gen_qvariant.QVariant.create2(value))
+  variant.operatorAssign(
+     when QtCoreGenVersion == "5.15.8":
+      gen_qvariant.QVariant.create2(value)
+    else:
+      gen_qvariant.QVariant.create(value)
+  )
 
 proc dos_qvariant_setBool(variant: DosQVariant, value: bool) =
   variant.operatorAssign(gen_qvariant.QVariant.create(value))
