@@ -189,6 +189,19 @@ proc endRemoveRows*(self: QAbstractItemModel) =
   debugMsg("QAbstractItemModel", "endRemoveRows")
   dos_qabstractitemmodel_endRemoveRows(self.vptr.DosQAbstractItemModel)
 
+proc beginMoveRows*(self: QAbstractItemModel, sourceParentIndex: QModelIndex,
+    sourceFirst: int, sourceLast: int, destParentIndex: QModelIndex, destinationChild: int) =
+  ## Notify the view that the model is about to move rows
+  debugMsg("QAbstractItemModel", "beginMoveRows")
+  dos_qabstractitemmodel_beginMoveRows(self.vptr.DosQAbstractItemModel,
+    sourceParentIndex.vptr, sourceFirst.cint, sourceLast.cint,
+    destParentIndex.vptr, destinationChild.cint)
+
+proc endMoveRows*(self: QAbstractItemModel) =
+  ## Notify the view that the rows have been moved
+  debugMsg("QAbstractItemModel", "endMoveRows")
+  dos_qabstractitemmodel_endMoveRows(self.vptr.DosQAbstractItemModel)
+
 proc beginInsertColumns*(self: QAbstractItemModel, parentIndex: QModelIndex, first: int, last: int) =
   ## Notify the view that the model is about to inserting the given number of columns
   debugMsg("QAbstractItemModel", "beginInsertColumns")
@@ -222,11 +235,15 @@ proc endResetModel*(self: QAbstractItemModel) =
 proc dataChanged*(self: QAbstractItemModel,
                  topLeft: QModelIndex,
                  bottomRight: QModelIndex,
-                 roles: openArray[int]) =
-  ## Notify the view that the model data changed
+                 roles: openArray[int] = []) =
+  ## Notify the view that the model data changed.
   debugMsg("QAbstractItemModel", "dataChanged")
-  var copy: seq[cint]
-  for i in roles:
-    copy.add(i.cint)
-  dos_qabstractitemmodel_dataChanged(self.vptr.DosQAbstractItemModel, topLeft.vptr,
-                                     bottomRight.vptr, copy[0].addr, copy.len.cint)
+  if roles.len == 0:
+    dos_qabstractitemmodel_dataChanged(self.vptr.DosQAbstractItemModel, topLeft.vptr,
+                                       bottomRight.vptr, nil, 0)
+  else:
+    var copy: seq[cint]
+    for i in roles:
+      copy.add(i.cint)
+    dos_qabstractitemmodel_dataChanged(self.vptr.DosQAbstractItemModel, topLeft.vptr,
+                                       bottomRight.vptr, copy[0].addr, copy.len.cint)

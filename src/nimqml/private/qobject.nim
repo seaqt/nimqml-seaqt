@@ -148,6 +148,12 @@ proc deleteLater*(self: QObject) =
   dos_qobject_deleteLater(self.vptr)
   self.vptr.resetToNil
 
-proc objectNameChanged*(self: QObject, objectName: string) {.signal.} = 
+proc objectNameChanged*(self: QObject, objectName: string) {.signal.} =
   ## Emit the object name changed signal
   self.emit("objectNameChanged", [newQVariant(objectName)])
+
+proc vptr*(self: QObject): pointer =
+  cast[pointer](self.vptr)
+
+proc `vptr=`*(self: QObject, p: pointer) =
+  self.vptr = cast[DosQObject](p)
