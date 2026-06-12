@@ -1,6 +1,10 @@
 {.push raises: [].}
 
 import tables, seaqt/QtCore/qtcore_pkg
+import seaqt/QtQml/gen_qjsengine
+# QObject ownership lives on QJSEngine in Qt 6 but on QQmlEngine in Qt 5; import
+# both so setCppOwnership can pick whichever the active Qt version provides.
+import seaqt/QtQml/gen_qqmlengine
 
 type
   NimQObject = pointer
@@ -142,8 +146,10 @@ proc dos_qapplication_delete() =
   delete(move(qapp))
 
 # QGuiApplication
+var qgapp: gen_qguiapplication.QGuiApplication
+
 proc dos_qguiapplication_create() =
-  debugEcho "dos_qguiapplication_create() "
+  qgapp = gen_qguiapplication.QGuiApplication.create()
 
 proc dos_qguiapplication_exec() =
   discard gen_qguiapplication.QGuiApplication.exec()
@@ -152,7 +158,7 @@ proc dos_qguiapplication_quit() =
   gen_qcoreapplication.QCoreApplication.quit()
 
 proc dos_qguiapplication_delete() =
-  debugEcho "dos_qguiapplication_delete() "
+  delete(move(qgapp))
 
 # QQmlContext
 proc dos_qqmlcontext_setcontextproperty(
@@ -280,13 +286,23 @@ proc dos_qobject_qmetaobject(): DosQMetaObject =
     addr slotDefs,
     addr propDefs,
   )
+proc setCppOwnership(obj: gen_qobject.QObject) =
+  ## This static method is on QJSEngine in Qt 6 and on QQmlEngine in Qt 5;
+  const CppOwnership = 0.cint
+  when compiles(gen_qjsengine.QJSEngine.setObjectOwnership(obj, CppOwnership)):
+    gen_qjsengine.QJSEngine.setObjectOwnership(obj, CppOwnership)
+  else:
+    gen_qqmlengine.QQmlEngine.setObjectOwnership(obj, CppOwnership)
+
 proc dos_qobject_create(nimobject: NimQObject, metaObject: DosQMetaObject, dosQObjectCallback: DosQObjectCallBack): DosQObject =
   let vtbl = new QObjectVtable
   gen_qobject.QObject.setupCallbacks(
     nimobject, metaObject, dosQObjectCallback, vtbl[], QObjectmetacall
   )
 
-  gen_qobject.QObject.create(vtbl = vtbl).take()
+  let obj = gen_qobject.QObject.create(vtbl = vtbl)
+  setCppOwnership(obj)
+  obj.take()
 
 proc dos_qobject_objectName(qobject: DosQObject): cstring =
   debugEcho "dos_qobject_objectName(qobject: DosQObject): cstring "
@@ -294,17 +310,21 @@ proc dos_qobject_objectName(qobject: DosQObject): cstring =
 proc dos_qobject_setObjectName(qobject: DosQObject, name: cstring) =
   qobject.setObjectName($name)
 proc dos_qobject_signal_emit(qobject: DosQObject, signalName: cstring, argumentsCount: cint, arguments: ptr DosQVariantArray) =
+  if cast[pointer](qobject).isNil:
+    return
+
   let mo = qobject.metaObject()
+  if mo.h.isNil:
+    return
 
   for i in 0 ..< mo.methodCount:
     let meth = mo.methodX(cint(i))
     if meth.parameterCount() == argumentsCount and signalName.toOpenArrayByte(0, len(signalName) - 1) == meth.name:
-
       var argv = newSeq[pointer](argumentsCount + 1)
-      for i in 0 ..< argumentsCount:
-        argv[i + 1] = arguments[i].constData()
+      for j in 0 ..< argumentsCount:
+        argv[j + 1] = arguments[j].constData()
       gen_qobjectdefs.QMetaObject.activate(qobject, cint i, addr argv[0])
-      break
+      return
 
 proc dos_qobject_connect_static(
     sender: DosQObject,
@@ -473,7 +493,9 @@ proc dos_qabstractitemmodel_create(modelPtr: NimQAbstractItemModel,
     modelPtr, qaimCallbacks, vtbl[]
   )
 
-  gen_qabstractitemmodel.QAbstractItemModel.create(vtbl).take()
+  let model = gen_qabstractitemmodel.QAbstractItemModel.create(vtbl)
+  setCppOwnership(gen_qobject.QObject(h: model.h, owned: false))
+  model.take()
 
 proc dos_qabstractitemmodel_beginInsertRows(model: DosQAbstractItemModel,
                                             parentIndex: DosQModelIndex,
@@ -492,6 +514,17 @@ proc dos_qabstractitemmodel_beginRemoveRows(model: DosQAbstractItemModel,
 
 proc dos_qabstractitemmodel_endRemoveRows(model: DosQAbstractItemModel) =
   model.endRemoveRows()
+
+proc dos_qabstractitemmodel_beginMoveRows(model: DosQAbstractItemModel,
+                                          sourceParent: DosQModelIndex,
+                                          sourceFirst: cint,
+                                          sourceLast: cint,
+                                          destParent: DosQModelIndex,
+                                          destChild: cint) =
+  discard model.beginMoveRows(sourceParent, sourceFirst, sourceLast, destParent, destChild)
+
+proc dos_qabstractitemmodel_endMoveRows(model: DosQAbstractItemModel) =
+  model.endMoveRows()
 
 proc dos_qabstractitemmodel_beginInsertColumns(model: DosQAbstractItemModel,
                                                parentIndex: DosQModelIndex,
@@ -576,7 +609,9 @@ proc dos_qabstractlistmodel_create(modelPtr: NimQAbstractListModel,
     modelPtr, qaimCallbacks, vtbl[]
   )
 
-  gen_qabstractitemmodel.QAbstractListModel.create(vtbl = vtbl).take()
+  let model = gen_qabstractitemmodel.QAbstractListModel.create(vtbl = vtbl)
+  setCppOwnership(gen_qobject.QObject(h: model.h, owned: false))
+  model.take()
 
 proc dos_qabstractlistmodel_columnCount(modelPtr: DosQAbstractListModel, index: DosQModelIndex): cint =
   if index.isValid(): 1 else: 0
@@ -613,7 +648,9 @@ proc dos_qabstracttablemodel_create(modelPtr: NimQAbstractTableModel,
     modelPtr, qaimCallbacks, vtbl[]
   )
 
-  gen_qabstractitemmodel.QAbstractTableModel.create(vtbl = vtbl).take()
+  let model = gen_qabstractitemmodel.QAbstractTableModel.create(vtbl = vtbl)
+  setCppOwnership(gen_qobject.QObject(h: model.h, owned: false))
+  model.take()
 
 proc dos_qabstracttablemodel_parent(modelPtr: DosQAbstractTableModel, index: DosQModelIndex): DosQModelIndex =
   QModelIndex.create().take()

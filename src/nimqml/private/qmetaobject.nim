@@ -53,9 +53,9 @@ proc setup(superClass: QMetaObject,
                                             notifySignal: notifySignal)
     dosProperties.add(dosProperty)
 
-  let signals = DosSignalDefinitions(count: dosSignals.len.cint, definitions: if dosSignals.len > 0: dosSignals[0].unsafeAddr else: nil)
-  let slots = DosSlotDefinitions(count: dosSlots.len.cint, definitions: if dosSlots.len > 0: dosSlots[0].unsafeAddr else: nil)
-  let properties = DosPropertyDefinitions(count: dosProperties.len.cint, definitions: if dosProperties.len > 0: dosProperties[0].unsafeAddr else: nil)
+  let signalsList = DosSignalDefinitions(count: dosSignals.len.cint, definitions: if dosSignals.len > 0: dosSignals[0].unsafeAddr else: nil)
+  let slotsList = DosSlotDefinitions(count: dosSlots.len.cint, definitions: if dosSlots.len > 0: dosSlots[0].unsafeAddr else: nil)
+  let propertiesList = DosPropertyDefinitions(count: dosProperties.len.cint, definitions: if dosProperties.len > 0: dosProperties[0].unsafeAddr else: nil)
 
   when compiles(GC_ref(dosSignalParameters)):
     # prevent garbage collector from reclaiming parameter defs in case these
@@ -64,15 +64,24 @@ proc setup(superClass: QMetaObject,
     # internal pointers are not accounted for / dropped by the C compiler
     GC_ref(dosSignalParameters)
     GC_ref(dosSlotParameters)
+    GC_ref(dosSignals)
     GC_ref(dosSlots)
     GC_ref(dosProperties)
 
-  result = dos_qmetaobject_create(superClass.vptr, className.cstring, signals.unsafeAddr, slots.unsafeAddr, properties.unsafeAddr)
+    GC_ref(signals)
+    GC_ref(slots)
+    GC_ref(properties)
+
+  result = dos_qmetaobject_create(superClass.vptr, className.cstring, signalsList.unsafeAddr, slotsList.unsafeAddr, propertiesList.unsafeAddr)
   when compiles(GC_unref(dosSignalParameters)):
     GC_unref(dosSignalParameters)
     GC_unref(dosSlotParameters)
+    GC_unref(dosSignals)
     GC_unref(dosSlots)
     GC_unref(dosProperties)
+    GC_unref(signals)
+    GC_unref(slots)
+    GC_unref(properties)
 
 proc invokeMethod*(typ: type QMetaObject, context: QObject, l: LambdaInvokerProc, connectionType: ConnectionType = ConnectionType.AutoConnection): bool =
   let id = LambdaInvoker.instance.add(l)

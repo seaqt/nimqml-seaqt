@@ -123,3 +123,9 @@ proc `value=`*(self: QVariant, value: int) = self.intVal = value
 proc `value=`*(self: QVariant, value: bool) = self.boolVal = value
 proc `value=`*(self: QVariant, value: cfloat) = self.floatVal = value
 proc `value=`*(self: QVariant, value: cdouble) = self.doubleVal = value
+
+proc vptr*(self: QVariant): pointer =
+  cast[pointer](self.vptr)
+
+proc newQVariantTakingPtr*(p: pointer): QVariant =
+  newQVariant(cast[DosQVariant](p), Ownership.Take)
