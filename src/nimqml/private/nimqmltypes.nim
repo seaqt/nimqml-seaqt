@@ -73,6 +73,8 @@ type
     UnknownType = 0.cint,
     Bool = 1.cint,
     Int = 2.cint,
+    LongLong = 4.cint,
+    Double = 6.cint,
     QString = 10.cint,
     VoidStar = 31.cint,
     Float = 38.cint,
