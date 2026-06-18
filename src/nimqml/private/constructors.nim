@@ -94,6 +94,10 @@ proc newQVariant*(value: cfloat): QVariant =
   new(result, delete)
   result.setup(value)
 
+proc newQVariant*(value: cdouble): QVariant =
+  new(result, delete)
+  result.setup(value)
+
 ############# QUrl #############
 proc setup*(self: QUrl, url: string, mode: QUrlParsingMode)
 proc delete*(self: QUrl)

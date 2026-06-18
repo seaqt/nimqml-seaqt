@@ -89,7 +89,14 @@ const
 
 type
   QMetaObjectData = object
-    superdata: pointer
+    # Mirrors QMetaObject::d (qobjectdefs.h). The first member is a SuperData,
+    # which is normally a single `const QMetaObject *direct` pointer — EXCEPT on
+    # Windows, where Qt defines QT_NO_DATA_RELOCATION (qsystemdetection.h: pointers
+    # to dllimport'ed variables aren't constexpr) and SuperData gains a second
+    # member, `Getter indirect`, making it 16 bytes instead of 8
+    superdata: pointer            # SuperData::direct
+    when defined(windows):
+      superdataIndirect: pointer  # SuperData::indirect (QT_NO_DATA_RELOCATION)
     stringdata: pointer
     data: ptr cuint
     static_metacall: pointer

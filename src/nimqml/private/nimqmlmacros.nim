@@ -87,11 +87,17 @@ proc toMetaType(x: string): string {.compiletime.} =
   case x
   of "": result = "Void"
   of "void": result = "Void"
-  of "int": result = "Int"
+  # Nim's `int` is pointer-width (64-bit here) and newQVariant() builds a qlonglong
+  # (LongLong) QVariant for it (qvariant.nim). The declared signal/slot/property
+  # metatype must agree
+  of "int": result = (when sizeof(int) == sizeof(cint): "Int" else: "LongLong")
   of "bool": result = "Bool"
   of "string": result = "QString"
   of "double": result = "Double"
-  of "float": result = "Float"
+  # Nim's `float` is float64 (== cdouble), and newQVariant builds a Double QVariant
+  # for it. Declaring it as 32-bit Float here mismatches the actual 64-bit value
+  of "float": result = "Double"
+  of "float32": result = "Float"
   of "pointer": result = "VoidStar"
   of "QVariant": result = "QVariant"
   of "QObject": result = "QObjectStar"
