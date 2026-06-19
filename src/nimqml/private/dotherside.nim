@@ -333,7 +333,7 @@ proc dos_qobject_connect_static(
     receiverFunc: cstring,
     connectionType: cint,
 ): DosQMetaObjectConnection =
-  receiver.connect(sender, senderFunc, receiverFunc).take()
+  receiver.connect(sender, senderFunc, receiverFunc, connectionType).take()
 
 proc dos_qobject_connect_lambda_static(
     sender: DosQObject,
