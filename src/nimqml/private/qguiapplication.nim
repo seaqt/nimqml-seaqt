@@ -18,3 +18,11 @@ proc exec*(self: QGuiApplication) =
 proc quit*(self: QGuiApplication) =
   ## Quit the Qt event loop
   dos_qguiapplication_quit()
+
+proc exit*(self: QGuiApplication) =
+  ## Exit the Qt event loop
+  dos_qguiapplication_exit()
+
+proc icon*(self: QGuiApplication, fileName: string) =
+  ## Set the application window icon from a file path
+  dos_qguiapplication_icon(fileName.cstring)
