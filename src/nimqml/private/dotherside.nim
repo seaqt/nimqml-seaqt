@@ -5,6 +5,7 @@ import seaqt/QtQml/gen_qjsengine
 # QObject ownership lives on QJSEngine in Qt 6 but on QQmlEngine in Qt 5; import
 # both so setCppOwnership can pick whichever the active Qt version provides.
 import seaqt/QtQml/gen_qqmlengine
+import seaqt/QtGui/gen_qicon
 
 type
   NimQObject = pointer
@@ -156,6 +157,15 @@ proc dos_qguiapplication_exec() =
 
 proc dos_qguiapplication_quit() =
   gen_qcoreapplication.QCoreApplication.quit()
+
+proc dos_qguiapplication_exit() =
+  if gen_qcoreapplication.QCoreApplication.closingDown():
+    return
+  gen_qcoreapplication.QCoreApplication.exit()
+
+proc dos_qguiapplication_icon(fileName: cstring) =
+  ## Set the application window icon from a file path (acts on the global qApp).
+  gen_qguiapplication.QGuiApplication.setWindowIcon(gen_qicon.QIcon.create($fileName))
 
 proc dos_qguiapplication_delete() =
   delete(move(qgapp))

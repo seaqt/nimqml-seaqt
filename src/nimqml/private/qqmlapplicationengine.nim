@@ -1,3 +1,5 @@
+from seaqt/QtQml/gen_qqmlapplicationengine_types import nil
+
 proc setup*(self: QQmlApplicationEngine) =
   ## Setup a QQmlApplicationEngine
   self.vptr = dos_qqmlapplicationengine_create()
@@ -25,6 +27,11 @@ proc setRootContextProperty*(self: QQmlApplicationEngine, name: string, value: Q
 
 proc vptr*(self: QQmlApplicationEngine): pointer =
   cast[pointer](self.vptr)
+
+proc seaqt*(self: QQmlApplicationEngine): gen_qqmlapplicationengine_types.QQmlApplicationEngine =
+  ## nimqml QQmlApplicationEngine -> seaqt QQmlApplicationEngine, BORROWED.
+  ## owned:false so seaqt's =destroy never frees the engine nimqml still owns.
+  gen_qqmlapplicationengine_types.QQmlApplicationEngine(h: cast[pointer](self.vptr), owned: false)
 
 proc delete*(self: QQmlApplicationEngine) =
   ## Delete the given QQmlApplicationEngine
