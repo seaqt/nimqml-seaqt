@@ -26,15 +26,17 @@ import ./private/scalarhelpers
 QtObject:
   type ScalarObj = ref object of QObject
     m_amount: float
+    m_ratio: float32
     m_marketCap: float
     m_count: int
 
   proc delete(self: ScalarObj)
   proc setup(self: ScalarObj)
 
-  proc newScalarObj(amount: float, marketCap: float, count: int): ScalarObj =
+  proc newScalarObj(amount: float, ratio: float32, marketCap: float, count: int): ScalarObj =
     new(result, delete)
     result.m_amount = amount
+    result.m_ratio = ratio
     result.m_marketCap = marketCap
     result.m_count = count
     result.setup
@@ -52,6 +54,13 @@ QtObject:
     read = getAmount
     notify = amountChanged
 
+  proc ratioChanged(self: ScalarObj) {.signal.}
+  proc getRatio(self: ScalarObj): float32 {.slot.} =
+    self.m_ratio
+  QtProperty[float32] ratio:
+    read = getRatio
+    notify = ratioChanged
+
   proc marketCapChanged(self: ScalarObj) {.signal.}
   proc getMarketCap(self: ScalarObj): float {.slot.} =
     self.m_marketCap
@@ -68,7 +77,7 @@ QtObject:
 
 proc test() =
   for expected in doubleCases:
-    let o = newScalarObj(expected, expected * 1000.0, 0)
+    let o = newScalarObj(expected, 0.0'f32, expected * 1000.0, 0)
     defer: o.delete()
 
     let amount = readDouble(o, "amount")
@@ -79,8 +88,15 @@ proc test() =
     doAssert abs(marketCap - expected * 1000.0) < 1e-9,
       "marketCap marshaling broken: expected " & $(expected * 1000.0) & " got " & $marketCap
 
+  for expected in floatCases:
+    let o = newScalarObj(0.0, expected, 0.0, 0)
+    defer: o.delete()
+    let ratio = readFloat(o, "ratio")
+    doAssert abs(ratio - expected) < 1e-5'f32,
+      "ratio (float32) marshaling broken: expected " & $expected & " got " & $ratio
+
   for expected in intCases:
-    let o = newScalarObj(0.0, 0.0, expected)
+    let o = newScalarObj(0.0, 0.0'f32, 0.0, expected)
     defer: o.delete()
     let count = readLongLong(o, "count")
     doAssert count == expected,

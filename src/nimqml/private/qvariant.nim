@@ -54,12 +54,11 @@ proc isNull*(variant: QVariant): bool =
 
 proc intVal*(variant: QVariant): int =
   ## Return the QVariant value as int
-  dos_qvariant_toInt(variant.vptr).int
+  dos_qvariant_toLongLong(variant.vptr).int
 
 proc `intVal=`*(variant: QVariant, value: int) =
   ## Sets the QVariant value int value
-  var rawValue = value.cint
-  dos_qvariant_setInt(variant.vptr, rawValue)
+  dos_qvariant_setInt(variant.vptr, value.clonglong)
 
 proc boolVal*(variant: QVariant): bool =
   ## Return the QVariant value as bool
