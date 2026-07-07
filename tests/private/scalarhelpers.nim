@@ -4,7 +4,10 @@ from seaqt/qobject as seaqt_qobject import nil
 from seaqt/qvariant as seaqt_qvariant import nil
 
 const
-  intCases* = [42, 5_000_000_000, -5_000_000_000, int.high, int.low]
+  intCases* = when sizeof(int) == sizeof(cint):
+    [42, int.high, int.low]
+  else:
+    [42, 5_000_000_000, -5_000_000_000, int.high, int.low]
   doubleCases* = [0.00729879, 22.796, 15.091, 1234.56789, -0.5, 1e-9]
   writeDoubleCases* = [0.00729879, 22.796, -0.5, 1e-9]
   floatCases* = [0.98599'f32, 3.14159'f32, -12.5'f32]
