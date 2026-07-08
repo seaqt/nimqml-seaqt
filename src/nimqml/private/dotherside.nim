@@ -235,6 +235,9 @@ proc dos_qvariant_isnull(variant: DosQVariant): bool =
 proc dos_qvariant_toInt(variant: DosQVariant): cint =
   variant.toInt()
 
+proc dos_qvariant_toLongLong(variant: DosQVariant): clonglong =
+  variant.toLongLong()
+
 proc dos_qvariant_toBool(variant: DosQVariant): bool =
   variant.toBool()
 
@@ -254,6 +257,9 @@ proc dos_qvariant_setInt(variant: DosQVariant, value: cint) =
     else:
       gen_qvariant.QVariant.create(value)
   )
+
+proc dos_qvariant_setInt(variant: DosQVariant, value: clonglong) =
+  variant.operatorAssign(gen_qvariant.QVariant.create(value))
 
 proc dos_qvariant_setBool(variant: DosQVariant, value: bool) =
   variant.operatorAssign(gen_qvariant.QVariant.create(value))

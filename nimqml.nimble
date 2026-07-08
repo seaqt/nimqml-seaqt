@@ -24,8 +24,14 @@ task buildExamples, "Build examples":
   exec "nim c examples/simpledata/main"
   exec "nim c examples/slotsandproperties/main"
 
+task unitTests, "Run unit tests (seaqt, no GUI)":
+  for t in ["src/seaqt/private/test_metaobjectgen.nim",
+            "tests/tqtproperty_marshaling.nim",
+            "tests/tqtproperty_write.nim",
+            "tests/tqtscalar_signal_slot.nim"]:
+    exec "nim c --path:src -r " & t
+
 task test, "Run a few tests":
   exec "nim c -r examples/connections/main"
   exec "nim c --mm:refc -r examples/connections/main"
-
-  exec "nim c -r src/seaqt/private/test_metaobjectgen"
+  exec "nimble unitTests"

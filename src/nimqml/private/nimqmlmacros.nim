@@ -69,40 +69,61 @@ proc display(info: QObjectInfo) {.compiletime.} =
   ## Display a QObjectInfo
   echo info.toString
 
+type QtTypeInfo = object
+  known: bool
+  metaType: string
+  cppName: string
+  hasAccessor: bool
+  accessor: string
+  ## When hasAccessor is true, the QVariant accessor name for generated slot code
+  ## (e.g. "doubleVal"). Empty string means use assign (QVariant type).
+
+proc ti(metaType, cppName, accessor: string): QtTypeInfo =
+  QtTypeInfo(known: true, metaType: metaType, cppName: cppName,
+             hasAccessor: true, accessor: accessor)
+
+proc ti(metaType, cppName: string): QtTypeInfo =
+  QtTypeInfo(known: true, metaType: metaType, cppName: cppName,
+             hasAccessor: false, accessor: "")
+
+proc qtTypeInfo(x: string): QtTypeInfo {.compiletime.} =
+  ## Single source of truth for a Nim type name used in QtObject slots/signals/
+  ## properties. All three consumers must agree:
+  ##   - metaType: QMetaType enum declared when the metaobject is registered
+  ##   - cppName:  C++ type name in Qt method signatures (connect must match)
+  ##   - accessor: QVariant read/write in onSlotCalled (width must match metaType)
+  case x
+  of "", "void":  ti("Void", "void")
+  of "int":
+    when sizeof(int) == sizeof(cint):
+      ti("Int", "int", "intVal")
+    else:
+      ti("LongLong", "qlonglong", "intVal")
+  of "bool":      ti("Bool", "bool", "boolVal")
+  of "string":    ti("QString", "QString", "stringVal")
+  of "double":    ti("Double", "double", "doubleVal")
+  # Nim `float` is float64; accessor must be doubleVal, not floatVal.
+  of "float":     ti("Double", "double", "doubleVal")
+  of "float32":   ti("Float", "float", "floatVal")
+  of "pointer":   ti("VoidStar", "void*")
+  of "QVariant":  ti("QVariant", "QVariant", "")  # "" => assign
+  of "QObject":   ti("QObjectStar", "QObject*", "qobjectVal")
+  else:
+    QtTypeInfo(known: false)
+
 proc fromQVariantConversion(x: string): string {.compiletime.} =
-  ## Return the correct conversion call from a QVariant
-  ## to the given nim type
-  case x:
-  of "int": result = "intVal"
-  of "string": result = "stringVal"
-  of "bool": result = "boolVal"
-  of "float": result = "floatVal"
-  of "double": result = "doubleVal"
-  of "QObject": result = "qobjectVal"
-  of "QVariant": result = ""
-  else: error("Unsupported conversion from QVariant to $1" % x)
+  ## Return the correct conversion call from a QVariant to the given nim type
+  let info = qtTypeInfo(x)
+  if not info.known or not info.hasAccessor:
+    error("Unsupported conversion from QVariant to $1" % x)
+  info.accessor
 
 proc toMetaType(x: string): string {.compiletime.} =
   ## Convert a nim type to QMetaType
-  case x
-  of "": result = "Void"
-  of "void": result = "Void"
-  # Nim's `int` is pointer-width (64-bit here) and newQVariant() builds a qlonglong
-  # (LongLong) QVariant for it (qvariant.nim). The declared signal/slot/property
-  # metatype must agree
-  of "int": result = (when sizeof(int) == sizeof(cint): "Int" else: "LongLong")
-  of "bool": result = "Bool"
-  of "string": result = "QString"
-  of "double": result = "Double"
-  # Nim's `float` is float64 (== cdouble), and newQVariant builds a Double QVariant
-  # for it. Declaring it as 32-bit Float here mismatches the actual 64-bit value
-  of "float": result = "Double"
-  of "float32": result = "Float"
-  of "pointer": result = "VoidStar"
-  of "QVariant": result = "QVariant"
-  of "QObject": result = "QObjectStar"
-  else: error("Unsupported conversion of $1 to metatype" % x)
-  result = "QMetaType.$1" % result
+  let info = qtTypeInfo(x)
+  if not info.known:
+    error("Unsupported conversion of $1 to metatype" % x)
+  result = "QMetaType.$1" % info.metaType
 
 proc toMetaType(types: seq[string]): seq[string] {.compiletime.} =
   ## Convert a sequence of nim types to a sequence of QMetaTypes
@@ -587,12 +608,12 @@ proc extractProcDefs(node: NimNode): seq[NimNode] {.compileTime.} =
     raiseAssert("Invalid Node")
 
 proc generateSignature(info: MyProcInfo): string {.compileTime.} =
-  let mapTypes = proc(name: string): string =
-      if name == "string":
-        "QString"
-      else:
-        name
-  let name = info.name
+  # Reuse the same Nim-type -> C++-name mapping used to register the metaobject,
+  # so connect() signatures match indexOfSignal/indexOfSlot. Unknown types pass
+  # through verbatim (custom/registered types keep their own name).
+  proc mapTypes(name: string): string =
+    let t = qtTypeInfo(name)
+    if t.known: t.cppName else: name
   let params = info.params[1 .. ^1].map(mapTypes).join(",")
   let prefix = if info.isSlot: "1" else: "2"
   return $prefix & $info.name & "(" & $params & ")"
