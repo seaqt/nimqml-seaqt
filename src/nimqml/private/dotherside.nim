@@ -167,6 +167,9 @@ proc dos_qguiapplication_icon(fileName: cstring) =
   ## Set the application window icon from a file path (acts on the global qApp).
   gen_qguiapplication.QGuiApplication.setWindowIcon(gen_qicon.QIcon.create($fileName))
 
+proc dos_qguiapplication_setBadgeNumber(number: int64) =
+  qgapp.setBadgeNumber(number)
+
 proc dos_qguiapplication_delete() =
   delete(move(qgapp))
 

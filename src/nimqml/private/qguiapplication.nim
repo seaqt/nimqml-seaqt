@@ -26,3 +26,6 @@ proc exit*(self: QGuiApplication) =
 proc icon*(self: QGuiApplication, fileName: string) =
   ## Set the application window icon from a file path
   dos_qguiapplication_icon(fileName.cstring)
+
+proc setBadgeNumber*(self: QGuiApplication, number: int64) =
+  dos_qguiapplication_setBadgeNumber(number)
