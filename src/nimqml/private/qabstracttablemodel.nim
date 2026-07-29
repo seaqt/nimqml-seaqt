@@ -31,6 +31,7 @@ proc setup*(self: QAbstractTableModel) =
   canFetchMore: canFetchMoreCallback,
   fetchMore: fetchMoreCallback)
 
+  self.owner = true
   self.vptr = dos_qabstracttablemodel_create(addr(self[]), self.metaObject.vptr,
                                             qobjectCallback, qaimCallbacks).DosQObject
 

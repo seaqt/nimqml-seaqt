@@ -157,6 +157,7 @@ proc setup*(self: QAbstractItemModel) =
   canFetchMore: canFetchMoreCallback,
   fetchMore: fetchMoreCallback)
 
+  self.owner = true
   self.vptr = dos_qabstractitemmodel_create(addr(self[]), self.metaObject.vptr,
                                             qobjectCallback, qaimCallbacks).DosQObject
 
