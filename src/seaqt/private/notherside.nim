@@ -182,13 +182,43 @@ proc findProp(
   except CatchableError as exc:
     raiseAssert exc.msg
 
+# A Nim exception must never propagate into the C++ caller of a Qt callback:
+# with goto exceptions the raise degrades into an early return with a default
+# (often nil) result plus a still-set error flag, so the C++ side dereferences
+# garbage and the NEXT entry into Nim aborts early too - a SIGSEGV far from the
+# actual raise site. Log loudly and continue with a safe default instead.
+proc nosLogEscapedException(kind, msg, trace: string) {.raises: [].} =
+  {.cast(gcsafe).}:
+    try:
+      stderr.writeLine "[nimqml-seaqt] " & kind &
+        " escaped a Qt callback (suppressed at the C++ boundary): " & msg
+      if trace.len > 0:
+        stderr.writeLine trace
+    except IOError, OSError:
+      discard
+
 template noExceptions(body: untyped): untyped =
   try:
     body
   except Defect as e:
-    raise e
+    nosLogEscapedException("Defect", e.msg, e.getStackTrace())
+  except CatchableError as e:
+    nosLogEscapedException("Exception", e.msg, e.getStackTrace())
   except Exception as e:
-    raiseAssert(e.msg & "\n" & e.getStackTrace())
+    nosLogEscapedException("Exception", e.msg, e.getStackTrace())
+
+template noExceptions(fallback: typed, body: untyped): untyped =
+  try:
+    body
+  except Defect as e:
+    nosLogEscapedException("Defect", e.msg, e.getStackTrace())
+    fallback
+  except CatchableError as e:
+    nosLogEscapedException("Exception", e.msg, e.getStackTrace())
+    fallback
+  except Exception as e:
+    nosLogEscapedException("Exception", e.msg, e.getStackTrace())
+    fallback
 
 proc nos_qmetaobject_create(
     superclassMetaObject: gen_qobjectdefs_types.QMetaObject,
@@ -321,7 +351,7 @@ template setupCallbacks[MC](
       if meth.returnType() != QMetaTypeTypeEnum.Void and dosArgs[0].isValid():
         discard QMetaType.construct(meth.returnType(), argv[0], args[0].constData())
 
-    noExceptions:
+    noExceptions(cint(-1)):
       const propEnums =
         when declared(QueryPropertyDesignable):
           {
@@ -384,7 +414,7 @@ template setupCallbacks(
 ) =
   if qaimCallbacks.rowCount != nil:
     vtbl.rowCount = proc(self: T, parent: QModelIndex): cint =
-      noExceptions:
+      noExceptions(cint(0)):
         var v: cint
         {.gcsafe.}:
           qaimCallbacks.rowCount(modelPtr, parent.borrow(), v)
@@ -393,7 +423,7 @@ template setupCallbacks(
   when T is gen_qabstractitemmodel.QAbstractTableModel:
     if qaimCallbacks.columnCount != nil:
       vtbl.columnCount = proc(self: T, parent: QModelIndex): cint =
-        noExceptions:
+        noExceptions(cint(0)):
           var v: cint
           {.gcsafe.}:
             qaimCallbacks.columnCount(modelPtr, parent.borrow(), v)
@@ -401,17 +431,19 @@ template setupCallbacks(
 
   if qaimCallbacks.data != nil:
     vtbl.data = proc(self: T, index: QModelIndex, role: cint): gen_qvariant.QVariant =
+      # v is created outside noExceptions so a swallowed exception still hands
+      # C++ a valid (null-QVariant) handle - the gen shim dereferences it.
+      var v = gen_qvariant.QVariant.create()
       noExceptions:
-        var v = gen_qvariant.QVariant.create()
         {.gcsafe.}:
           qaimCallbacks.data(modelPtr, index.borrow(), role, v.borrow())
-        v
+      v
 
   if qaimCallbacks.setData != nil:
     vtbl.setData = proc(
         self: T, index: QModelIndex, value: gen_qvariant.QVariant, role: cint
     ): bool =
-      noExceptions:
+      noExceptions(false):
         var v: bool
         {.gcsafe.}:
           qaimCallbacks.setData(modelPtr, index.borrow(), value.borrow(), role, v)
@@ -419,13 +451,13 @@ template setupCallbacks(
 
   if qaimCallbacks.roleNames != nil:
     vtbl.roleNames = proc(self: T): tables.Table[cint, seq[byte]] =
-      noExceptions:
+      noExceptions(default(tables.Table[cint, seq[byte]])):
         {.gcsafe.}:
           qaimCallbacks.roleNames(modelPtr)
 
   if qaimCallbacks.flags != nil:
     vtbl.flags = proc(self: T, index: QModelIndex): cint =
-      noExceptions:
+      noExceptions(cint(0)):
         var v: cint
         {.gcsafe.}:
           qaimCallbacks.flags(modelPtr, index.borrow(), v)
@@ -435,45 +467,52 @@ template setupCallbacks(
     vtbl.headerData = proc(
         self: T, section: cint, orientation: cint, role: cint
     ): gen_qvariant.QVariant =
+      var v = gen_qvariant.QVariant.create()
       noExceptions:
-        var v = gen_qvariant.QVariant.create()
         {.gcsafe.}:
           qaimCallbacks.headerData(modelPtr, section, orientation, role, v.borrow())
-        v
+      v
   if qaimCallbacks.index != nil:
     vtbl.index =
       when T is QAbstractItemModel:
         proc(
             self: T, row: cint, column: cint, parent: QModelIndex
         ): QModelIndex {.closure.} =
+          var v: DosQModelIndex
           noExceptions:
-            var v: DosQModelIndex
             {.gcsafe.}:
               qaimCallbacks.index(modelPtr, row, column, parent.borrow(), v)
-            v
+          if pointer(v) == nil:
+            # never hand C++ a null QModelIndex* - the gen shim dereferences it
+            v = gen_qabstractitemdelegate.QModelIndex.create().take()
+          v
       else:
         proc(
             self: T, row: cint, column: cint, parent: QModelIndex
         ): QModelIndex {.closure.} =
+          var v: DosQModelIndex
           noExceptions:
-            var v: DosQModelIndex
             {.gcsafe.}:
               qaimCallbacks.index(modelPtr, row, column, parent.borrow(), v)
-            v
+          if pointer(v) == nil:
+            v = gen_qabstractitemdelegate.QModelIndex.create().take()
+          v
 
   when T isnot gen_qabstractitemmodel.QAbstractListModel and
       T isnot gen_qabstractitemmodel.QAbstractTableModel:
     if qaimCallbacks.parent != nil:
       vtbl.parent = proc(self: T, child: QModelIndex): QModelIndex =
+        var v: DosQModelIndex
         noExceptions:
-          var v: DosQModelIndex
           {.gcsafe.}:
             qaimCallbacks.parent(modelPtr, child.borrow(), v)
-          v
+        if pointer(v) == nil:
+          v = gen_qabstractitemdelegate.QModelIndex.create().take()
+        v
 
     if qaimCallbacks.hasChildren != nil:
       vtbl.hasChildren = proc(self: T, child: QModelIndex): bool =
-        noExceptions:
+        noExceptions(false):
           var v: bool
           {.gcsafe.}:
             qaimCallbacks.hasChildren(modelPtr, child.borrow(), v)
@@ -481,7 +520,7 @@ template setupCallbacks(
 
   if qaimCallbacks.canFetchMore != nil:
     vtbl.canFetchMore = proc(self: T, parentX: QModelIndex): bool {.closure, gcsafe.} =
-      noExceptions:
+      noExceptions(false):
         var v: bool
         {.gcsafe.}:
           qaimCallbacks.canFetchMore(modelPtr, parentX.borrow(), v)
