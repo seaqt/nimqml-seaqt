@@ -4,11 +4,17 @@
 
 import
   seaqt/[
-    qabstractitemdelegate, qabstractitemmodel, qapplication, qcoreapplication,
+    qabstractitemmodel, qcoreapplication,
     qguiapplication, qmetatype, qmetaobject, qobject, qmetamethod, qresource, qurl,
     qvariant, qqmlapplicationengine, qqmlcomponent, qqmlcontext, qquickview,
   ],
   ./metaobjectgen
+
+# -d:nimqmlUseWidgets=false builds without QApplication and the QtWidgets link flags
+const nimqmlUseWidgets* {.booldefine.} = true
+
+when nimqmlUseWidgets:
+  import seaqt/qapplication
 
 {.compile: "notherside.cpp".}
 
@@ -484,7 +490,7 @@ template setupCallbacks(
               qaimCallbacks.index(modelPtr, row, column, parent.borrow(), v)
           if pointer(v) == nil:
             # never hand C++ a null QModelIndex* - the gen shim dereferences it
-            v = gen_qabstractitemdelegate.QModelIndex.create().take()
+            v = gen_qabstractitemmodel_types.QModelIndex.create().take()
           v
       else:
         proc(
@@ -495,7 +501,7 @@ template setupCallbacks(
             {.gcsafe.}:
               qaimCallbacks.index(modelPtr, row, column, parent.borrow(), v)
           if pointer(v) == nil:
-            v = gen_qabstractitemdelegate.QModelIndex.create().take()
+            v = gen_qabstractitemmodel_types.QModelIndex.create().take()
           v
 
   when T isnot gen_qabstractitemmodel.QAbstractListModel and
@@ -507,7 +513,7 @@ template setupCallbacks(
           {.gcsafe.}:
             qaimCallbacks.parent(modelPtr, child.borrow(), v)
         if pointer(v) == nil:
-          v = gen_qabstractitemdelegate.QModelIndex.create().take()
+          v = gen_qabstractitemmodel_types.QModelIndex.create().take()
         v
 
     if qaimCallbacks.hasChildren != nil:
