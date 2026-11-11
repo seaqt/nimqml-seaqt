@@ -10,6 +10,9 @@ proc delete*(self: QObject) =
   dos_qobject_delete(self.vptr)
   self.vptr.resetToNil
 
+proc isQObjectDeleted*(self: QObject): bool =
+  self.vptr.isNil
+
 proc newQObject*(): QObject =
   ## Return a new QObject
   new(result, delete)

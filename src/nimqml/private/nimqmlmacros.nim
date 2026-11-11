@@ -515,6 +515,24 @@ template slot* {.pragma.}
 
 template signal* {.pragma.}
 
+proc isOwnDelete(n: NimNode, typeName: string): bool {.compiletime.} =
+  if not isProcOrMethod(n) or n.body.kind == nnkEmpty or not n.name.eqIdent("delete"):
+    return false
+  let params = n.params
+  params.len == 2 and params[1].len == 3 and params[1][1].eqIdent(typeName)
+
+proc runOnlyOnce(deleteProc: NimNode): NimNode {.compiletime.} =
+  ## `delete` is both called explicitly and the finalizer (`new(result, delete)`).
+  ## When the finalizer runs in a cycle collection, the children the body deletes may
+  ## already be freed: once the Qt side is gone the body has run, so skip it.
+  result = deleteProc
+  let self = deleteProc.params[1][0]
+  let body = deleteProc.body
+  result.body = quote do:
+    if isQObjectDeleted(`self`.QObject):
+      return
+    `body`
+
 macro QtObject*(body: untyped): untyped =
   ## Generate the QObject stuff
   let info = extractQObjectInfo(body)
@@ -522,6 +540,8 @@ macro QtObject*(body: untyped): untyped =
   for n in body.children:
     if isSignal(n):
       result.add generateSignalDefinition(n)
+    elif isOwnDelete(n, info.name):
+      result.add runOnlyOnce(n)
     else:
       result.add n
   result.add(generateMetaObject(info))
