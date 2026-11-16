@@ -524,13 +524,23 @@ proc isOwnDelete(n: NimNode, typeName: string): bool {.compiletime.} =
 proc runOnlyOnce(deleteProc: NimNode): NimNode {.compiletime.} =
   ## `delete` is both called explicitly and the finalizer (`new(result, delete)`).
   ## When the finalizer runs in a cycle collection, the children the body deletes may
-  ## already be freed: once the Qt side is gone the body has run, so skip it.
+  ## already be freed, so the body runs only once. Tracked by a flag, not by the Qt side
+  ## being gone: deleteLater() drops the Qt side without running the body, and a body may
+  ## leave it (not the owner, as for objects QML creates; no base delete; an early
+  ## return). A body may call its parent type's delete: that nested call runs, and the
+  ## whole counts as run once the outermost body returns.
+  ## Not covered: an object never deleted explicitly runs its body first as the finalizer.
   result = deleteProc
   let self = deleteProc.params[1][0]
   let body = deleteProc.body
+  let step = genSym(nskLet, "deleteStep")
   result.body = quote do:
-    if isQObjectDeleted(`self`.QObject):
+    let `step` = enterDeleteBody(`self`.QObject)
+    if `step` == dbsSkip:
       return
+    defer:
+      if `step` == dbsOutermost:
+        leaveDeleteBody(`self`.QObject)
     `body`
 
 macro QtObject*(body: untyped): untyped =

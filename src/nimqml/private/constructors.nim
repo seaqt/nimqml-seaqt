@@ -10,8 +10,22 @@ proc delete*(self: QObject) =
   dos_qobject_delete(self.vptr)
   self.vptr.resetToNil
 
-proc isQObjectDeleted*(self: QObject): bool =
-  self.vptr.isNil
+type DeleteBodyStep* = enum
+  ## What a QtObject's `delete` body does on this call (code the QtObject macro generates)
+  dbsSkip      ## the body already ran
+  dbsOutermost ## first call: run the body, which then counts as run
+  dbsNested    ## called while the body runs (a subtype's delete calling its parent's)
+
+proc enterDeleteBody*(self: QObject): DeleteBodyStep =
+  case self.deleteBody
+  of dbNotRun:
+    self.deleteBody = dbRunning
+    dbsOutermost
+  of dbRunning: dbsNested
+  of dbRan: dbsSkip
+
+proc leaveDeleteBody*(self: QObject) =
+  self.deleteBody = dbRan
 
 proc newQObject*(): QObject =
   ## Return a new QObject

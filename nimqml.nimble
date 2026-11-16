@@ -28,7 +28,8 @@ task unitTests, "Run unit tests (seaqt, no GUI)":
   for t in ["src/seaqt/private/test_metaobjectgen.nim",
             "tests/tqtproperty_marshaling.nim",
             "tests/tqtproperty_write.nim",
-            "tests/tqtscalar_signal_slot.nim"]:
+            "tests/tqtscalar_signal_slot.nim",
+            "tests/tdelete_body_once.nim"]:
     exec "nim c --path:src -r " & t
 
 task test, "Run a few tests":
