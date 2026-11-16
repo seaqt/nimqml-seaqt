@@ -1,8 +1,13 @@
 type
+  DeleteBodyState = enum
+    ## Where a QtObject's `delete` body is (see the QtObject macro)
+    dbNotRun, dbRunning, dbRan
+
   QObject* = ref object of RootObj ## \
     ## A QObject
     vptr: DosQObject
     owner: bool
+    deleteBody: DeleteBodyState
 
   QAbstractItemModel* = ref object of QObject ## \
     ## A QAbstractItemModel

@@ -515,6 +515,34 @@ template slot* {.pragma.}
 
 template signal* {.pragma.}
 
+proc isOwnDelete(n: NimNode, typeName: string): bool {.compiletime.} =
+  if not isProcOrMethod(n) or n.body.kind == nnkEmpty or not n.name.eqIdent("delete"):
+    return false
+  let params = n.params
+  params.len == 2 and params[1].len == 3 and params[1][1].eqIdent(typeName)
+
+proc runOnlyOnce(deleteProc: NimNode): NimNode {.compiletime.} =
+  ## `delete` is both called explicitly and the finalizer (`new(result, delete)`).
+  ## When the finalizer runs in a cycle collection, the children the body deletes may
+  ## already be freed, so the body runs only once. Tracked by a flag, not by the Qt side
+  ## being gone: deleteLater() drops the Qt side without running the body, and a body may
+  ## leave it (not the owner, as for objects QML creates; no base delete; an early
+  ## return). A body may call its parent type's delete: that nested call runs, and the
+  ## whole counts as run once the outermost body returns.
+  ## Not covered: an object never deleted explicitly runs its body first as the finalizer.
+  result = deleteProc
+  let self = deleteProc.params[1][0]
+  let body = deleteProc.body
+  let step = genSym(nskLet, "deleteStep")
+  result.body = quote do:
+    let `step` = enterDeleteBody(`self`.QObject)
+    if `step` == dbsSkip:
+      return
+    defer:
+      if `step` == dbsOutermost:
+        leaveDeleteBody(`self`.QObject)
+    `body`
+
 macro QtObject*(body: untyped): untyped =
   ## Generate the QObject stuff
   let info = extractQObjectInfo(body)
@@ -522,6 +550,8 @@ macro QtObject*(body: untyped): untyped =
   for n in body.children:
     if isSignal(n):
       result.add generateSignalDefinition(n)
+    elif isOwnDelete(n, info.name):
+      result.add runOnlyOnce(n)
     else:
       result.add n
   result.add(generateMetaObject(info))
