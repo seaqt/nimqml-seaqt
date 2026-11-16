@@ -132,19 +132,20 @@ proc dos_qcoreapplication_application_dir_path(): string =
   gen_qcoreapplication.QCoreApplication.applicationDirPath()
 
 # # QApplication
-var qapp: gen_qapplication.Qapplication
+when nimqmlUseWidgets:
+  var qapp: gen_qapplication.Qapplication
 
-proc dos_qapplication_create() =
-  qapp = gen_qapplication.QApplication.create()
+  proc dos_qapplication_create() =
+    qapp = gen_qapplication.QApplication.create()
 
-proc dos_qapplication_exec() =
-  discard gen_qapplication.QApplication.exec()
+  proc dos_qapplication_exec() =
+    discard gen_qapplication.QApplication.exec()
 
-proc dos_qapplication_quit() =
-  gen_qapplication.QApplication.quit()
+  proc dos_qapplication_quit() =
+    gen_qapplication.QApplication.quit()
 
-proc dos_qapplication_delete() =
-  delete(move(qapp))
+  proc dos_qapplication_delete() =
+    delete(move(qapp))
 
 # QGuiApplication
 var qgapp: gen_qguiapplication.QGuiApplication
@@ -452,10 +453,10 @@ proc dos_qhash_int_qbytearray_value(qHash: DosQHashIntByteArray, key: int): cstr
 
 # QModelIndex
 proc dos_qmodelindex_create(): DosQModelIndex =
-  gen_qabstractitemdelegate.QModelIndex.create().take()
+  gen_qabstractitemmodel_types.QModelIndex.create().take()
 
 proc dos_qmodelindex_create_qmodelindex(other: DosQModelIndex): DosQModelIndex =
-  gen_qabstractitemdelegate.QModelIndex.create(other).take()
+  gen_qabstractitemmodel_types.QModelIndex.create(other).take()
 
 proc dos_qmodelindex_delete(modelIndex: DosQModelIndex) =
   modelIndex.delete()
